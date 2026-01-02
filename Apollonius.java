@@ -5,6 +5,46 @@ import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 
+class Vector {
+	double x;
+	double y;
+	
+	public Vector(double x, double y) {
+		this.x = x;
+		this.y = y;
+	}
+	
+	public double squared_length() {
+		return x*x + y*y;
+	}
+	
+	public double length() {
+		return Math.sqrt(squared_length());
+	}
+	
+	public Vector normalized() {
+		double len = length();
+		return new Vector(x/len, y/len);
+	}
+	
+	public Vector normalized(double new_len) {
+		double len = length();
+		return new Vector(x/len*new_len, y/len*new_len);
+	}
+	
+	public static double dot(Vector a, Vector b) {
+		return a.x*b.x + a.y*b.y;
+	}
+	
+	public Vector scaled(double factor) {
+		return new Vector(x*factor, y*factor);
+	}
+	
+	public String toString() {
+		return String.format("-> (%.2f, %.2f)", x, y);
+	}
+}
+
 class Point {
 	double x;
 	double y;
@@ -14,8 +54,16 @@ class Point {
 		this.y = y;
 	}
 	
+	public static Vector difference(Point a, Point b) {
+		return new Vector(a.x - b.x, a.y - b.y);
+	}
+	
+	public Point translated(Vector a) {
+		return new Point(x + a.x, y + a.y);
+	}
+	
 	public String toString() {
-		return String.format("(%.2f, %.2f)", x, y);
+		return String.format(">< (%.2f, %.2f)", x, y);
 	}
 }
 
@@ -96,6 +144,39 @@ class LinearFunction {
 	}
 }
 
+class Triangle {
+	Point a;
+	Point b;
+	Point c;
+
+	public Triangle(Point a, Point b, Point c) {
+		this.a = a;
+		this.b = b;
+		this.c = c;
+	}
+	
+	public boolean contains(Point p, boolean do_debug) {
+		Vector tx_axis = Point.difference(b, a);
+		Vector ty_axis = Point.difference(c, a);
+		
+		Vector rel_pos = Point.difference(p, a);
+		
+		double tx = Vector.dot(rel_pos, tx_axis) / tx_axis.squared_length();
+		double ty = Vector.dot(rel_pos, ty_axis) / ty_axis.squared_length();
+		
+		if (do_debug) {
+			System.out.println(String.format("%s within %s", p.toString(), this.toString()));
+			System.out.println(String.format("%s %s %s %.2f %.2f", tx_axis.toString(), ty_axis.toString(), rel_pos.toString(), tx, ty));
+		}
+		
+		return tx >= 0 && ty >= 0 && tx + ty <= 1;
+	}
+	
+	public String toString() {
+		return String.format("/\\ %s - %s - %s", a.toString(), b.toString(), c.toString());
+	}
+}
+
 // This class represents an individual circle in the apollonius grain fractal, called a "grain".
 // Each is the result of finding a circle tangent to three others, its parent plus two contributors. Each grain has three children and is the parent of all three.
 // A node's two contributors are chosen from among the node's parent's parent and parent's contributors. Since order doesn't matter, there are three possibilites, and thus three children.
@@ -167,17 +248,28 @@ class ApolloniusGrain {
 	// That is, by one of the circles. This metric is used in coloring.
 	// If the point is not contained, returns the max depth plus one.
 	// When called on the root, if the point is contained by scaffold circles, returns 0. If contained by the root, returns 1.
-	public int getContainmentDepth(Point p) {
+	public int getContainmentDepth(Point p, boolean do_debug) {
 		if (isRoot()) {
 			if (this.parent.contains(p) || this.contributor_a.contains(p) || this.contributor_b.contains(p)) {
 				return 0;
 			}
 		}
 		
-		return getContainmentDepth(p, 1);
+		return getContainmentDepthRecurse(p, 1, do_debug);
 	}
 	
-	private int getContainmentDepth(Point p, int current_depth) {
+	// This function assumes that the parent circles of this grain are tangent to each other.
+	// In that case, this grain and all its children are contained in the triangle whose vertices are the points of tangency.
+	public Triangle getDartBounds() {
+		// For each pair of circles, translate olne origin in the direction of the other circle out to its radius, at the point of tangency.
+		return new Triangle(
+			parent.origin().translated(Point.difference(contributor_a.origin(), parent.origin()).normalized(parent.radius())),
+			parent.origin().translated(Point.difference(contributor_b.origin(), parent.origin()).normalized(parent.radius())),
+			contributor_a.origin().translated(Point.difference(contributor_b.origin(), contributor_a.origin()).normalized(contributor_a.radius()))
+		);
+	}
+	
+	private int getContainmentDepthRecurse(Point p, int current_depth, boolean do_debug) {
 		if (this.circle.contains(p)) {
 			return current_depth;
 		}
@@ -186,19 +278,38 @@ class ApolloniusGrain {
 				return current_depth+1;
 			}
 			else {
-				return Math.min(
-					this.child_a.getContainmentDepth(p, current_depth+1),
-					Math.min(
-						this.child_b.getContainmentDepth(p, current_depth+1),
-						this.child_c.getContainmentDepth(p, current_depth+1)
-					)
-				);
+				ApolloniusGrain[] children = new ApolloniusGrain[] {child_a, child_b, child_c};
+				for (int i = 0; i < 3; i++) {
+					Triangle dart_bounds = children[i].getDartBounds();
+					if (dart_bounds.contains(p, do_debug)) {
+						return children[i].getContainmentDepthRecurse(p, current_depth+1, do_debug);
+					}
+				}
 			}
+		}
+		
+		return current_depth + getMaxDepth() + 1;
+	}
+	
+	private int getMaxDepth() {
+		if (isLeaf()) {
+			return 0;
+		}
+		else {
+			return child_a.getMaxDepth() + 1;
 		}
 	}
 	
 	private boolean contains(Point p) {
 		return circle.contains(p);
+	}
+	
+	private Point origin() {
+		return circle.origin;
+	}
+	
+	private double radius() {
+		return circle.radius;
 	}
 	
 	private boolean isLeaf() {
@@ -211,6 +322,10 @@ class ApolloniusGrain {
 	
 	private boolean isRoot() {
 		return this.parent != null && this.parent.isScaffold();
+	}
+	
+	public String toString() {
+		return this.circle.toString();
 	}
 }
 
@@ -347,15 +462,17 @@ public class Apollonius {
 		
 		// Generate fractal.
 		ApolloniusGrain root = new ApolloniusGrain(A, B, C);
-		root.calculateChildrenToDepth(8);
+		root.calculateChildrenToDepth(1);
 		
 		float left = -0.5f;
 		float right = 0.5f;
-		float top = -0.5f;
-		float bottom = 0.5f;
+		float top = -1/3f * (float) Math.sqrt(3);
+		float bottom = 1/6f * (float) Math.sqrt(3);
+		
+		float aspect_ratio = (right-left) / (bottom-top);
 		
 		int width = 1024*2;
-		int height = 1024*2;
+		int height = (int) (width / aspect_ratio);
 		
 		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		
@@ -366,9 +483,12 @@ public class Apollonius {
 					((double) y) / height * (bottom - top) + top
 				);
 				
-				int depth = root.getContainmentDepth(sample);
+				boolean do_debug = x == 530 && y == 1370;
+				
+				int depth = root.getContainmentDepth(sample, do_debug);
 				
 				int val = (int) (255 * (1 - Math.pow(3, -(float) depth / 10)));
+				//int val = depth % 2 * 255;
 				int pixel = (val << 16) | (val << 8) | val;
 
                 // Set the pixel at the specific coordinates
