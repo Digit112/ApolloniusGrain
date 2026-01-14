@@ -14,6 +14,15 @@ class Vector {
 		this.y = y;
 	}
 	
+	public Vector(Matrix m) {
+		if (m.nomCols() != 1 || m.numRows() != 2) {
+			throw new Error("Matrix must be 2x1 (column vector) to be convertable to a vector.");
+		}
+		
+		this.x = m.d[0][0];
+		this.y = m.d[0][1];
+	}
+	
 	public double squared_length() {
 		return x*x + y*y;
 	}
@@ -64,6 +73,56 @@ class Point {
 	
 	public String toString() {
 		return String.format(">< (%.2f, %.2f)", x, y);
+	}
+}
+
+class Matrix {
+	double[][] d;
+	
+	public Matrix(int r, int c) {
+		this.d = new double[r][c];
+	}
+	
+	public Matrix(double[][] d) {
+		this.d = d;
+		
+		for (int i = 1; i < d.length; i++) {
+			if (d[i].length != d[0].length) {
+				throw new Error("Matrix must be rectangular.");
+			}
+		}
+	}
+	
+	public Matrix(Vector v) {
+		this.d = new double[2][1] {{v.x}, {v.y}};
+	}
+	
+	public int numRows() {
+		return d.length;
+	}
+	
+	public int numCols() {
+		return d.a.length;
+	}
+	
+	public static Matrix multiply(Matrix a, Matrix b) {
+		if (a.numCols() != b.numRows()) {
+			throw new Error("The left matrix's width must equal the right matrix's height.");
+		}
+		
+		Matrix ret = new Matrix(a.numRows(), b.numCols());
+		
+		for (int r = 0; r < a.numRows(); r++) {
+			for (int c = 0; c < b.numCols(); c++) {
+				for (int i = 0; i < a.numCols(); i++) {
+					ret.d[r][c] += a.d[r][i] * b.d[i][c];
+				}
+			}
+		}
+	}
+	
+	public static Vector multiply(Matrix a, Vector b) {
+		return new Vector(Matrix.multiply(a, new Matrix(b)));
 	}
 }
 
@@ -156,18 +215,40 @@ class Triangle {
 	}
 	
 	public boolean contains(Point p, boolean do_debug) {
-		Vector tx_axis = Point.difference(b, a);
-		Vector ty_axis = Point.difference(c, a);
+		Vector base = Point.difference(b, a);
+		Vector left_arm = Point.difference(c, a);
+		Vector right_arm = Point.difference(c, b);
 		
 		Vector rel_pos = Point.difference(p, a);
 		
-		double tx = Vector.dot(rel_pos, tx_axis) / tx_axis.squared_length();
-		double ty = Vector.dot(rel_pos, ty_axis) / ty_axis.squared_length();
+		double base_sqr_len = base.squared_length();
+		double base_len = Math.sqrt(base_sqr_len);
+		
+		double proj_len = Vector.dot(left_arm, base) / base.length();
+		double proj_sqr_len = proj_len*proj_len;
+		double rel_proj_len = proj_len / base_len;
+		
+		// Intersection of the base with a line dropped from the shared vertex of the armss down perpendicular to the base.
+		Vector drop = new Vector(rel_proj_len * base.x + a.x, rel_proj_len * base.y + a.y);
+		
+		double sgnd_height = Vector.dot(near_arm, new Vector(-base.y, base.x).normalized());
+		
+		double right_ratio = proj_len / base_sqr_len / sgnd_height;
+		double left_ratio = 1 / base_sqr_len;
+		double lower_ratio = 1 / sgnd_height / base_len;
+		
+		// This transformation matrix transforms the triangle A, B, C to (0, 0), (1, 0), (0, 1).
+		Matrix triangle_transform = new Matrix(new double[][] {
+			{base.x * left_ratio + base.y * right_ratio, base.y * left_ratio - base.x * right_ratio},
+			{-base.y * lower_ratio, base.x * lower_ratio},
+		});
 		
 		if (do_debug) {
 			System.out.println(String.format("%s within %s", p.toString(), this.toString()));
 			System.out.println(String.format("%s %s %s %.2f %.2f", tx_axis.toString(), ty_axis.toString(), rel_pos.toString(), tx, ty));
 		}
+		
+		
 		
 		return tx >= 0 && ty >= 0 && tx + ty <= 1;
 	}
