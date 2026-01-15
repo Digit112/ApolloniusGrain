@@ -15,12 +15,12 @@ class Vector {
 	}
 	
 	public Vector(Matrix m) {
-		if (m.nomCols() != 1 || m.numRows() != 2) {
+		if (m.numCols() != 1 || m.numRows() != 2) {
 			throw new Error("Matrix must be 2x1 (column vector) to be convertable to a vector.");
 		}
 		
 		this.x = m.d[0][0];
-		this.y = m.d[0][1];
+		this.y = m.d[1][0];
 	}
 	
 	public double squared_length() {
@@ -94,7 +94,7 @@ class Matrix {
 	}
 	
 	public Matrix(Vector v) {
-		this.d = new double[2][1] {{v.x}, {v.y}};
+		this.d = new double[][] {{v.x}, {v.y}};
 	}
 	
 	public int numRows() {
@@ -102,7 +102,7 @@ class Matrix {
 	}
 	
 	public int numCols() {
-		return d.a.length;
+		return d[0].length;
 	}
 	
 	public static Matrix multiply(Matrix a, Matrix b) {
@@ -115,10 +115,13 @@ class Matrix {
 		for (int r = 0; r < a.numRows(); r++) {
 			for (int c = 0; c < b.numCols(); c++) {
 				for (int i = 0; i < a.numCols(); i++) {
-					ret.d[r][c] += a.d[r][i] * b.d[i][c];
+					double product = a.d[r][i] * b.d[i][c];
+					ret.d[r][c] += product;
 				}
 			}
 		}
+		
+		return ret;
 	}
 	
 	public static Vector multiply(Matrix a, Vector b) {
@@ -231,11 +234,11 @@ class Triangle {
 		// Intersection of the base with a line dropped from the shared vertex of the armss down perpendicular to the base.
 		Vector drop = new Vector(rel_proj_len * base.x + a.x, rel_proj_len * base.y + a.y);
 		
-		double sgnd_height = Vector.dot(near_arm, new Vector(-base.y, base.x).normalized());
+		double signed_height = Vector.dot(left_arm, new Vector(-base.y, base.x).normalized());
 		
-		double right_ratio = proj_len / base_sqr_len / sgnd_height;
+		double right_ratio = proj_len / base_sqr_len / signed_height;
 		double left_ratio = 1 / base_sqr_len;
-		double lower_ratio = 1 / sgnd_height / base_len;
+		double lower_ratio = 1 / signed_height / base_len;
 		
 		// This transformation matrix transforms the triangle A, B, C to (0, 0), (1, 0), (0, 1).
 		Matrix triangle_transform = new Matrix(new double[][] {
@@ -243,14 +246,20 @@ class Triangle {
 			{-base.y * lower_ratio, base.x * lower_ratio},
 		});
 		
+		Vector new_point = Matrix.multiply(triangle_transform, rel_pos);
+		
 		if (do_debug) {
-			System.out.println(String.format("%s within %s", p.toString(), this.toString()));
-			System.out.println(String.format("%s %s %s %.2f %.2f", tx_axis.toString(), ty_axis.toString(), rel_pos.toString(), tx, ty));
+			System.out.println(String.format("Base Length: %.2f Proj Length: %.2f (Rel: %.2f) Signed Height: %.2f Ratios: %.2f %.2f %.2f",
+				base_len, proj_len, rel_proj_len, signed_height, right_ratio, left_ratio, lower_ratio));
+			
+			System.out.println(String.format("%s within %s",
+				p.toString(), this.toString()));
+			
+			System.out.println(String.format("Arms: %s %s %s Drop Point: %s Rel Point: %s Transformed Point: %s",
+				base.toString(), left_arm.toString(), right_arm.toString(), drop.toString(), rel_pos.toString(), new_point.toString()));
 		}
 		
-		
-		
-		return tx >= 0 && ty >= 0 && tx + ty <= 1;
+		return new_point.x >= 0 && new_point.y >= 0 && new_point.x + new_point.y <= 1;
 	}
 	
 	public String toString() {
@@ -535,6 +544,12 @@ public class Apollonius {
 	
     public static void main(String[] args) throws IOException {
         System.out.println("Hello, World");
+		
+		Triangle test = new Triangle(
+			new Point(1, 1.5), new Point(3, 1), new Point(0, 2)
+		);
+		
+		System.out.println(test.contains(new Point(1.3, 1.5), true));
 		
 		// Form of an equilateral triangle.
 		Circle A = new Circle(new Point( 0,  2.0/3*Math.sqrt(3)), 1);
