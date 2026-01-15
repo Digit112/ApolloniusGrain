@@ -150,6 +150,10 @@ class Circle {
 		return dx*dx + dy*dy < radius*radius;
 	}
 	
+	public double area() {
+		return Math.PI * radius * radius;
+	}
+	
 	public String toString() {
 		return String.format("(%.2f, %.2f) -- %.2f", origin.x, origin.y, radius);
 	}
@@ -267,6 +271,74 @@ class Triangle {
 	}
 }
 
+// Signed, Axis-Aligned Rectangle.
+// Represents an axis-aligned Rectangle defined by two points.
+// Exchanging the x components of the points negates the signed width of the rectangle, likewise with the y components and signed height.
+class SgndAlgndRectangle {
+	public Point a;
+	public Point b;
+	
+	public SgndAlgndRectangle(Point a, Point b) {
+		this.a = a;
+		this.b = b;
+	}
+	
+	public SgndAlgndRectangle(Point a, Vector size) {
+		this.a = a;
+		this.b = a.translated(size);
+	}
+	
+	public double width() {
+		return Math.abs(signedWidth());
+	}
+	
+	public double height() {
+		return Math.abs(signedHeight());
+	}
+	
+	public double aspectRatio() {
+		return Math.abs(signedAspectRatio());
+	}
+	
+	public double signedWidth() {
+		return b.x - a.x;
+	}
+	
+	public double signedHeight() {
+		return b.y - a.y;
+	}
+	
+	public double signedAspectRatio() {
+		return signedWidth() / signedHeight();
+	}
+	
+	public double left() {
+		return Math.min(a.x, b.x);
+	}
+	
+	public double top() {
+		return Math.min(a.y, b.y);
+	}
+	
+	public double right() {
+		return Math.max(a.x, b.x);
+	}
+	
+	public double bottom() {
+		return Math.max(a.y, b.y);
+	}
+	
+	// Scales the passed vector along the axes of this rectangle and translates according to the rectangle's offset.
+	// Passing (0, 0) returns this.a and (1, 1) returns this.b
+	// Passing (0, 1) returns (a.x, b.y), passing (1, 0) returns (b.x, a.y), passing (0.5, 0.5) returns the center of the rectangle.
+	public Point bilerp(Vector t) {
+		return new Point(
+			signedWidth() * t.x + a.x,
+			signedHeight() * t.y + a.y
+		);
+	}
+}
+
 // This class represents an individual circle in the apollonius grain fractal, called a "grain".
 // Each is the result of finding a circle tangent to three others, its parent plus two contributors. Each grain has three children and is the parent of all three.
 // A node's two contributors are chosen from among the node's parent's parent and parent's contributors. Since order doesn't matter, there are three possibilites, and thus three children.
@@ -381,6 +453,71 @@ class ApolloniusGrain {
 		return current_depth + getMaxDepth() + 1;
 	}
 	
+	// Returns five arrays giving, for each layer:
+	// - circle quantity
+	// - Total covered area
+	// - minimum radius
+	// - average radius
+	// - maximum radius
+	public double[][] getStats() {
+		if (isLeaf()) {
+			return new double[][] {{1}, {area()}, {radius()}, {radius()}, {radius()}};
+		}
+		
+		double[][][] child_stats = new double[][][] {
+			this.child_a.getStats(),
+			this.child_b.getStats(),
+			this.child_c.getStats()
+		};
+		
+		int max_depth = child_stats[0][0].length;
+		
+		// Combine child stats.
+		double[][] my_stats = new double[5][max_depth+1];
+		
+		for (int layer = 0; layer < max_depth; layer++) {
+			// Calculate circle quantity and area.
+			double total_child_circles = 0;
+			double total_circles_area = 0;
+			for (int child = 0; child < 3; child++) {
+				total_child_circles += child_stats[child][0][layer];
+				total_circles_area += child_stats[child][1][layer];
+			}
+			
+			my_stats[0][layer] = total_child_circles;
+			my_stats[1][layer] = total_circles_area;
+			
+			// Adjust average.
+			for (int child = 0; child < 3; child++) {
+				double child_weight = child_stats[child][0][layer] / total_child_circles;
+				my_stats[3][layer] += child_stats[child][3][layer] * child_weight;
+			}
+			
+			// Set min and max.
+			my_stats[2][layer] = Math.min(
+				child_stats[0][2][layer],
+				Math.min(child_stats[1][2][layer],
+				child_stats[2][2][layer])
+			);
+			
+			my_stats[4][layer] = Math.max(
+				child_stats[0][4][layer],
+				Math.max(child_stats[1][4][layer],
+				child_stats[2][4][layer])
+			);
+		}
+		
+		// Add self to stats
+		my_stats[0][max_depth] = 1;
+		my_stats[1][max_depth] = area();
+		my_stats[2][max_depth] = radius();
+		my_stats[3][max_depth] = radius();
+		my_stats[4][max_depth] = radius();
+		
+		return my_stats;
+			
+	}
+	
 	private int getMaxDepth() {
 		if (isLeaf()) {
 			return 0;
@@ -400,6 +537,10 @@ class ApolloniusGrain {
 	
 	private double radius() {
 		return circle.radius;
+	}
+	
+	private double area() {
+		return circle.area();
 	}
 	
 	private boolean isLeaf() {
@@ -545,11 +686,17 @@ public class Apollonius {
     public static void main(String[] args) throws IOException {
         System.out.println("Hello, World");
 		
-		Triangle test = new Triangle(
-			new Point(1, 1.5), new Point(3, 1), new Point(0, 2)
+		// Camera and image params.
+		SgndAlgndRectangle viewport = new SgndAlgndRectangle(
+			new Point(-0.5, -1/3f * (float) Math.sqrt(3)),
+			new Point( 0.5, 1/6f * (float) Math.sqrt(3))
 		);
 		
-		System.out.println(test.contains(new Point(1.3, 1.5), true));
+		float aspect_ratio = (float) viewport.aspectRatio();
+		
+		int width = 1024*4;
+		int height = (int) (width / aspect_ratio);
+		double pixel_width = viewport.width() / width;
 		
 		// Form of an equilateral triangle.
 		Circle A = new Circle(new Point( 0,  2.0/3*Math.sqrt(3)), 1);
@@ -558,26 +705,37 @@ public class Apollonius {
 		
 		// Generate fractal.
 		ApolloniusGrain root = new ApolloniusGrain(A, B, C);
-		root.calculateChildrenToDepth(1);
+		root.calculateChildrenToDepth(14);
 		
-		float left = -0.5f;
-		float right = 0.5f;
-		float top = -1/3f * (float) Math.sqrt(3);
-		float bottom = 1/6f * (float) Math.sqrt(3);
+		// Print statistics.
+		double[][] stats = root.getStats();
+		for (int i = 0; i < stats.length; i++) {
+			for (int j = 0; j < stats[i].length; j++) {
+				System.out.print(String.format("%.5f, ", stats[i][j]));
+			}
+			System.out.println("");
+		}
 		
-		float aspect_ratio = (right-left) / (bottom-top);
+		double total_area = 0;
+		for (int layer = 0; layer < stats[1].length; layer++) {
+			total_area += stats[1][layer];
+		}
 		
-		int width = 1024*2;
-		int height = (int) (width / aspect_ratio);
+		// This is the area of the gap between three circles of radius one arranged to be cotangent and in the shape of an equilateral triangle.
+		// It is calculated as the unit equilateral triangle minus the three segments of the unit circle.
+		// Each segment is a 60 degree slice of a circle minus a unit equilateral triangle spanning from a chord to the origin of its circle.
+		double max_area = Math.sqrt(3)/4 - 3*(Math.PI/6 - Math.sqrt(3)/4);
+		System.out.println(String.format("Total area: %.4f (%.2f%%)", total_area, total_area / max_area * 100));
 		
+		// Create image.
+		System.out.println("Rendering...");
 		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		
+		long start_time = System.nanoTime();
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
-				Point sample = new Point(
-					((double) x) / width  * (right - left) + left,
-					((double) y) / height * (bottom - top) + top
-				);
+				Point sample = viewport.bilerp(new Vector(
+					x / (double) width, y / (double) height
+				));
 				
 				boolean do_debug = x == 530 && y == 1370;
 				
@@ -591,6 +749,9 @@ public class Apollonius {
                 image.setRGB(x, y, pixel);
 			}
 		}
+		long end_time = System.nanoTime();
+		
+		System.out.println(String.format("Rendering complete in %.4f seconds.", (float) (end_time - start_time) / 1E9));
 		
 		File fout = new File("out.png");
 		ImageIO.write(image, "png", fout);
