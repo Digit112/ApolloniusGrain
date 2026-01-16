@@ -54,7 +54,7 @@ class Vector {
 	}
 }
 
-class Point {
+class Point implements CollisionResult1D {
 	double x;
 	double y;
 	
@@ -211,6 +211,24 @@ class LinearFunction {
 	
 	public String toString() {
 		return String.format("%.2fx + %.2f", slope, offset);
+	}
+}
+
+// Represents the possible results of a collision involving any constituents of dimension 0 or 1.
+public sealed interface CollisionResult1D {}
+
+class LineSegment implements CollisionResult1D {
+	Point a;
+	Point b;
+	
+	public LineSegment(Point a, Point b) {
+		this.a = a;
+		this.b = b;
+	}
+	
+	public LineSegment(Point a, Vector delta) {
+		this.a = a;
+		this.b = a.translated(delta);
 	}
 }
 
