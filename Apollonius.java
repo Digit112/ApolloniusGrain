@@ -150,6 +150,10 @@ class Circle {
 		return dx*dx + dy*dy < radius*radius;
 	}
 	
+	public double diameter() {
+		return radius*2;
+	}
+	
 	public double area() {
 		return Math.PI * radius * radius;
 	}
@@ -300,6 +304,31 @@ class SgndAlgndRectangle {
 		return Math.abs(signedAspectRatio());
 	}
 	
+	// Scales the passed vector along the axes of this rectangle and translates according to the rectangle's offset.
+	// Passing (0, 0) returns this.a and (1, 1) returns this.b
+	// Passing (0, 1) returns (a.x, b.y), passing (1, 0) returns (b.x, a.y), passing (0.5, 0.5) returns the center of the rectangle.
+	public Point bilerp(Vector t) {
+		return new Point(
+			signedWidth() * t.x + a.x,
+			signedHeight() * t.y + a.y
+		);
+	}
+	
+	// Decreases the width and height by a factor of the reciprocal of the input value.
+	// Center of the rectangle is fixed in place.
+	public void zoom(double factor) {
+		double half_delta_width  = signedWidth()  * (1 - 1 / factor) / 2;
+		double half_delta_height = signedHeight() * (1 - 1 / factor) / 2;
+		
+		a = a.translated(new Vector( half_delta_width,  half_delta_height));
+		b = b.translated(new Vector(-half_delta_width, -half_delta_height));
+	}
+	
+	public void translate(Vector offset) {
+		a = a.translated(offset);
+		b = b.translated(offset);
+	}
+	
 	public double signedWidth() {
 		return b.x - a.x;
 	}
@@ -316,7 +345,7 @@ class SgndAlgndRectangle {
 		return Math.min(a.x, b.x);
 	}
 	
-	public double top() {
+	public double bottom() {
 		return Math.min(a.y, b.y);
 	}
 	
@@ -324,18 +353,8 @@ class SgndAlgndRectangle {
 		return Math.max(a.x, b.x);
 	}
 	
-	public double bottom() {
+	public double top() {
 		return Math.max(a.y, b.y);
-	}
-	
-	// Scales the passed vector along the axes of this rectangle and translates according to the rectangle's offset.
-	// Passing (0, 0) returns this.a and (1, 1) returns this.b
-	// Passing (0, 1) returns (a.x, b.y), passing (1, 0) returns (b.x, a.y), passing (0.5, 0.5) returns the center of the rectangle.
-	public Point bilerp(Vector t) {
-		return new Point(
-			signedWidth() * t.x + a.x,
-			signedHeight() * t.y + a.y
-		);
 	}
 }
 
@@ -350,12 +369,14 @@ class ApolloniusGrain {
 	ApolloniusGrain contributor_b;
 	
 	Circle circle;
+	int datum;
+	int depth;
 	
 	ApolloniusGrain child_a;
 	ApolloniusGrain child_b;
 	ApolloniusGrain child_c;
 	
-	public ApolloniusGrain(ApolloniusGrain parent, ApolloniusGrain contributor_a, ApolloniusGrain contributor_b) {
+	public ApolloniusGrain(ApolloniusGrain parent, ApolloniusGrain contributor_a, ApolloniusGrain contributor_b, Random random) {
 		this.parent = parent;
 		this.contributor_a = contributor_a;
 		this.contributor_b = contributor_b;
@@ -367,19 +388,25 @@ class ApolloniusGrain {
 		this.child_a = null;
 		this.child_b = null;
 		this.child_c = null;
+		
+		this.datum = random.nextInt();
+		this.depth = parent.depth + 1;
 	}
 	
 	// Constructs the "parents" of the root. Unlike actual nodes, they have only one child: The real root.
 	// Such grains are called scaffolding. Three are needed to find the root.
-	public ApolloniusGrain(Circle circle) {
+	public ApolloniusGrain(Circle circle, Random random) {
 		this.circle = circle;
+		
+		this.datum = random.nextInt();
+		this.depth = -1;
 	}
 	
 	// Constructs the root.
-	public ApolloniusGrain(Circle A, Circle B, Circle C) {
-		this.parent = new ApolloniusGrain(A);
-		this.contributor_a = new ApolloniusGrain(B);
-		this.contributor_b = new ApolloniusGrain(C);
+	public ApolloniusGrain(Circle A, Circle B, Circle C, Random random) {
+		this.parent = new ApolloniusGrain(A, random);
+		this.contributor_a = new ApolloniusGrain(B, random);
+		this.contributor_b = new ApolloniusGrain(C, random);
 		
 		this.circle = Apollonius.getSmallerSolutionCircle(A, B, C);
 		if (this.circle == null)
@@ -388,42 +415,64 @@ class ApolloniusGrain {
 		this.child_a = null;
 		this.child_b = null;
 		this.child_c = null;
+		
+		this.datum = random.nextInt();
+		this.depth = 0;
 	}
 	
-	public void calculateChildren() {
-		this.child_a = new ApolloniusGrain(this, this.parent, this.contributor_a);
-		this.child_b = new ApolloniusGrain(this, this.parent, this.contributor_b);
-		this.child_c = new ApolloniusGrain(this, this.contributor_a, this.contributor_b);
+	// Calculates children based on self, parent, and contributors.
+	// Pass a random number generator to generate the datum.
+	public void calculateChildren(Random random) {
+		this.child_a = new ApolloniusGrain(this, this.parent, this.contributor_a, random);
+		this.child_b = new ApolloniusGrain(this, this.parent, this.contributor_b, random);
+		this.child_c = new ApolloniusGrain(this, this.contributor_a, this.contributor_b, random);
 	}
 	
-	public void calculateChildrenToDepth(int depth) {
+	// Pass a random number generator to generate the datum.
+	public void calculateChildrenToDepth(int depth, Random random) {
 		if (depth == 0) return;
 		
-		this.calculateChildren();
+		if (this.isLeaf()) {
+			this.calculateChildren(random);
+		}
 		
-		this.child_a.calculateChildrenToDepth(depth-1);
-		this.child_b.calculateChildrenToDepth(depth-1);
-		this.child_c.calculateChildrenToDepth(depth-1);
+		this.child_a.calculateChildrenToDepth(depth-1, random);
+		this.child_b.calculateChildrenToDepth(depth-1, random);
+		this.child_c.calculateChildrenToDepth(depth-1, random);
+	}
+	
+	// Recursively generate children until all leaf grains have no greater diameter than the passed threshold.
+	// Pass a random number generator to generate the datum.
+	public void calculateChildrenToGranularity(double min_diameter, Random random) {
+		if (this.isLeaf()) {
+			this.calculateChildren(random);
+		}
+		
+		if (diameter() > min_diameter) {
+			this.child_a.calculateChildrenToGranularity(min_diameter, random);
+			this.child_b.calculateChildrenToGranularity(min_diameter, random);
+			this.child_c.calculateChildrenToGranularity(min_diameter, random);
+		}
 	}
 	
 	// Returns the depth level at which the passed point is contained by the fractal generated so far.
 	// That is, by one of the circles. This metric is used in coloring.
 	// If the point is not contained, returns the max depth plus one.
 	// When called on the root, if the point is contained by scaffold circles, returns 0. If contained by the root, returns 1.
-	public int getContainmentDepth(Point p, boolean do_debug) {
+	public ApolloniusGrain getContainmentCircle(Point p, boolean do_debug) {
 		if (isRoot()) {
-			if (this.parent.contains(p) || this.contributor_a.contains(p) || this.contributor_b.contains(p)) {
-				return 0;
-			}
+			if (parent.contains(p)       ) return parent;
+			if (contributor_a.contains(p)) return contributor_a;
+			if (contributor_b.contains(p)) return contributor_b;
 		}
 		
-		return getContainmentDepthRecurse(p, 1, do_debug);
+		return getContainmentCircleRecurse(p, 1, do_debug);
 	}
 	
 	// This function assumes that the parent circles of this grain are tangent to each other.
 	// In that case, this grain and all its children are contained in the triangle whose vertices are the points of tangency.
 	public Triangle getDartBounds() {
-		// For each pair of circles, translate olne origin in the direction of the other circle out to its radius, at the point of tangency.
+		// For each pair of circles, translate one origin in the direction of the other circle out to its radius, at the point of tangency.
 		return new Triangle(
 			parent.origin().translated(Point.difference(contributor_a.origin(), parent.origin()).normalized(parent.radius())),
 			parent.origin().translated(Point.difference(contributor_b.origin(), parent.origin()).normalized(parent.radius())),
@@ -431,26 +480,26 @@ class ApolloniusGrain {
 		);
 	}
 	
-	private int getContainmentDepthRecurse(Point p, int current_depth, boolean do_debug) {
+	private ApolloniusGrain getContainmentCircleRecurse(Point p, int current_depth, boolean do_debug) {
 		if (this.circle.contains(p)) {
-			return current_depth;
+			return this;
 		}
 		else {
 			if (isLeaf()) {
-				return current_depth+1;
+				return null;
 			}
 			else {
 				ApolloniusGrain[] children = new ApolloniusGrain[] {child_a, child_b, child_c};
 				for (int i = 0; i < 3; i++) {
 					Triangle dart_bounds = children[i].getDartBounds();
 					if (dart_bounds.contains(p, do_debug)) {
-						return children[i].getContainmentDepthRecurse(p, current_depth+1, do_debug);
+						return children[i].getContainmentCircleRecurse(p, current_depth+1, do_debug);
 					}
 				}
 			}
 		}
 		
-		return current_depth + getMaxDepth() + 1;
+		return null;
 	}
 	
 	// Returns five arrays giving, for each layer:
@@ -470,7 +519,31 @@ class ApolloniusGrain {
 			this.child_c.getStats()
 		};
 		
-		int max_depth = child_stats[0][0].length;
+		// Find which child has the greatest depth.
+		int max_depth = 0;
+		for (int child = 0; child < 3; child++) {
+			if (child_stats[child][0].length > max_depth) {
+				max_depth = child_stats[child][0].length;
+			}
+		}
+		
+		// Pad child arrays.
+		for (int child_i = 0; child_i < 3; child_i++) {
+			for (int metric_i = 0; metric_i < child_stats[child_i].length; metric_i++) {
+				int cur_metric_array_len = child_stats[child_i][metric_i].length;
+				
+				if (cur_metric_array_len != max_depth) {
+					// Create longer array and paste in values.
+					double[] new_metric_array = new double[max_depth];
+					
+					for (int layer_i = 0; layer_i < cur_metric_array_len; layer_i++) {
+						new_metric_array[layer_i + max_depth - cur_metric_array_len] = child_stats[child_i][metric_i][layer_i];
+					}
+					
+					child_stats[child_i][metric_i] = new_metric_array;
+				}
+			}
+		}
 		
 		// Combine child stats.
 		double[][] my_stats = new double[5][max_depth+1];
@@ -527,19 +600,23 @@ class ApolloniusGrain {
 		}
 	}
 	
-	private boolean contains(Point p) {
+	public boolean contains(Point p) {
 		return circle.contains(p);
 	}
 	
-	private Point origin() {
+	public Point origin() {
 		return circle.origin;
 	}
 	
-	private double radius() {
+	public double radius() {
 		return circle.radius;
 	}
 	
-	private double area() {
+	public double diameter() {
+		return circle.diameter();
+	}
+	
+	public double area() {
 		return circle.area();
 	}
 	
@@ -683,77 +760,108 @@ public class Apollonius {
 			return sols[1];
 	}
 	
-    public static void main(String[] args) throws IOException {
-        System.out.println("Hello, World");
-		
-		// Camera and image params.
-		SgndAlgndRectangle viewport = new SgndAlgndRectangle(
-			new Point(-0.5, -1/3f * (float) Math.sqrt(3)),
-			new Point( 0.5, 1/6f * (float) Math.sqrt(3))
-		);
-		
-		float aspect_ratio = (float) viewport.aspectRatio();
-		
-		int width = 1024*4;
-		int height = (int) (width / aspect_ratio);
-		double pixel_width = viewport.width() / width;
-		
-		// Form of an equilateral triangle.
-		Circle A = new Circle(new Point( 0,  2.0/3*Math.sqrt(3)), 1);
-		Circle B = new Circle(new Point(-1, -1.0/3*Math.sqrt(3)), 1);
-		Circle C = new Circle(new Point( 1, -1.0/3*Math.sqrt(3)), 1);
-		
-		// Generate fractal.
-		ApolloniusGrain root = new ApolloniusGrain(A, B, C);
-		root.calculateChildrenToDepth(14);
-		
-		// Print statistics.
-		double[][] stats = root.getStats();
-		for (int i = 0; i < stats.length; i++) {
-			for (int j = 0; j < stats[i].length; j++) {
-				System.out.print(String.format("%.5f, ", stats[i][j]));
-			}
-			System.out.println("");
-		}
-		
-		double total_area = 0;
-		for (int layer = 0; layer < stats[1].length; layer++) {
-			total_area += stats[1][layer];
-		}
-		
-		// This is the area of the gap between three circles of radius one arranged to be cotangent and in the shape of an equilateral triangle.
-		// It is calculated as the unit equilateral triangle minus the three segments of the unit circle.
-		// Each segment is a 60 degree slice of a circle minus a unit equilateral triangle spanning from a chord to the origin of its circle.
-		double max_area = Math.sqrt(3)/4 - 3*(Math.PI/6 - Math.sqrt(3)/4);
-		System.out.println(String.format("Total area: %.4f (%.2f%%)", total_area, total_area / max_area * 100));
-		
-		// Create image.
-		System.out.println("Rendering...");
+	public static BufferedImage render(ApolloniusGrain root, int width, int height, SgndAlgndRectangle viewport) {
 		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		long start_time = System.nanoTime();
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
 				Point sample = viewport.bilerp(new Vector(
 					x / (double) width, y / (double) height
 				));
 				
-				boolean do_debug = x == 530 && y == 1370;
+				ApolloniusGrain grain = root.getContainmentCircle(sample, false);
+				int pixel = 0;
 				
-				int depth = root.getContainmentDepth(sample, do_debug);
+				if (grain != null) {
+					pixel = grain.datum & 0xFFFFFF;
+				}
+				// //int val = (int) (255 * (1 - Math.pow(3, -(float) grain.depth / 10)));
+				// int val = grain.depth % 2 * 255;
+				// int pixel = (val << 16) | (val << 8) | val;
 				
-				int val = (int) (255 * (1 - Math.pow(3, -(float) depth / 10)));
-				//int val = depth % 2 * 255;
-				int pixel = (val << 16) | (val << 8) | val;
 
                 // Set the pixel at the specific coordinates
                 image.setRGB(x, y, pixel);
 			}
 		}
-		long end_time = System.nanoTime();
 		
-		System.out.println(String.format("Rendering complete in %.4f seconds.", (float) (end_time - start_time) / 1E9));
+		return image;
+	}
+	
+    public static void main(String[] args) throws IOException {
+        System.out.println("Hello, World");
 		
-		File fout = new File("out.png");
-		ImageIO.write(image, "png", fout);
+		Random random = new Random();
+		
+		// Camera and image params.
+		SgndAlgndRectangle viewport = new SgndAlgndRectangle(
+			new Point(-0.5, -0.5),
+			new Point( 0.5,  0.5)
+		);
+		float aspect_ratio = (float) viewport.aspectRatio();
+		
+		int width = 1024*2;
+		int height = (int) (width / aspect_ratio);
+		
+		viewport.translate(new Vector(0.054, 0.154));
+		viewport.zoom(0.5);
+		
+		double final_zoom = 160;
+		int num_frames = 360;
+		
+		/* ---- END PARAMETERS ---- */
+			
+		// Form of an equilateral triangle.
+		Circle A = new Circle(new Point( 0,  2.0/3*Math.sqrt(3)), 1);
+		Circle B = new Circle(new Point(-1, -1.0/3*Math.sqrt(3)), 1);
+		Circle C = new Circle(new Point( 1, -1.0/3*Math.sqrt(3)), 1);
+		ApolloniusGrain root = new ApolloniusGrain(A, B, C, random);
+		
+		double zoom_per_frame = Math.pow(final_zoom, 1f / num_frames);
+		for (int frame_i = 0; frame_i < num_frames; frame_i++) {
+			double pixel_width = viewport.width() / width;
+			
+			//for (int i = 0; i < 
+			// Generate fractal.
+			double gen_start_time = System.nanoTime();
+			//root.calculateChildrenToDepth(14);
+			root.calculateChildrenToGranularity(pixel_width, random);
+			double gen_end_time = System.nanoTime();
+			
+			// Print statistics.
+			double[][] stats = root.getStats();
+			// for (int i = 0; i < stats.length; i++) {
+				// for (int j = 0; j < stats[i].length; j++) {
+					// System.out.print(String.format("%.5f, ", stats[i][j]));
+				// }
+				// System.out.println("");
+			// }
+			
+			int total_circles = 0;
+			double total_area = 0;
+			for (int layer = 0; layer < stats[1].length; layer++) {
+				total_circles += (int) stats[0][layer];
+				total_area += stats[1][layer];
+			}
+			
+			// This is the area of the gap between three circles of radius one arranged to be cotangent and in the shape of an equilateral triangle.
+			// It is calculated as the unit equilateral triangle minus the three segments of the unit circle.
+			// Each segment is a 60 degree slice of a circle minus a unit equilateral triangle spanning from a chord to the origin of its circle.
+			double max_area = Math.sqrt(3)/4 - 3*(Math.PI/6 - Math.sqrt(3)/4);
+			System.out.println(String.format("Total area: %.4f (%.2f%%) Total Circles: %d Max Depth: %d", total_area, total_area / max_area * 100, total_circles, stats[0].length));
+			
+			// Create image.
+			long render_start_time = System.nanoTime();
+			BufferedImage image = render(root, width, height, viewport);
+			long render_end_time = System.nanoTime();
+			
+			File fout = new File(String.format("out/%03d.png", frame_i));
+			ImageIO.write(image, "png", fout);
+			
+			System.out.println(String.format("FRAME %d: GEN: %.4fs, RENDER: %.4fs PX WIDTH: %.8f.",
+				frame_i, (float) (gen_end_time - gen_start_time) / 1E9, (float) (render_end_time - render_start_time) / 1E9, pixel_width));
+			
+			// Zoom in.
+			viewport.zoom(zoom_per_frame);
+		}
     }
 }
