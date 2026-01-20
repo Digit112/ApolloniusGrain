@@ -254,6 +254,48 @@ class ApolloniusGrain {
 		}
 	}
 	
+	// Obtains stats on this tree and prints them.
+	public void debug() {
+		String[] names = {" AREA", "MIN R", "AVG R", "MAX R"};
+		double[][] stats = getStats();
+		
+		// Display layer numbers.
+		System.out.print(String.format("LY ID: layer %2d", stats[0].length));
+		for (int j = 1; j < stats[0].length; j++) {
+			System.out.print(String.format(", layer %2d", stats[0].length - j));
+		}
+		System.out.println("");
+		
+		// Display total counts of circles.
+		System.out.print(String.format("COUNT: %8d", (int) stats[0][0]));
+		for (int j = 1; j < stats[0].length; j++) {
+			System.out.print(String.format(", %8d", (int) stats[0][j]));
+		}
+		System.out.println("");
+		
+		// Display other stats - areas as well as min, avg, max radius.
+		for (int i = 1; i < stats.length; i++) {
+			System.out.print(String.format("%s: %.2e", names[i-1], stats[i][0]));
+			for (int j = 1; j < stats[i].length; j++) {
+				System.out.print(String.format(", %.2e", stats[i][j]));
+			}
+			System.out.println("");
+		}
+		
+		int total_circles = 0;
+		double total_area = 0;
+		for (int layer = 0; layer < stats[1].length; layer++) {
+			total_circles += (int) stats[0][layer];
+			total_area += stats[1][layer];
+		}
+			
+		// This is the area of the gap between three circles of radius one arranged to be cotangent and in the shape of an equilateral triangle.
+		// It is calculated as the unit equilateral triangle minus the three segments of the unit circle.
+		// Each segment is a 60 degree slice of a circle minus a unit equilateral triangle spanning from a chord to the origin of its circle.
+		double max_area = Math.sqrt(3)/4 - 3*(Math.PI/6 - Math.sqrt(3)/4);
+		System.out.println(String.format("Total area: %.4f (%.2f%%) Total Circles: %d Max Depth: %d", total_area, total_area / max_area * 100, total_circles, stats[0].length));
+	}
+	
 	public boolean contains(Point p) {
 		return circle.contains(p);
 	}
@@ -482,31 +524,12 @@ public class Apollonius {
 			//for (int i = 0; i < 
 			// Generate fractal.
 			double gen_start_time = System.nanoTime();
-			//root.calculateChildrenToDepth(14);
-			root.calculateChildrenToGranularity(pixel_width, random);
+			root.calculateChildrenToDepth(14, random);
+			//root.calculateChildrenToGranularity(pixel_width, random);
 			double gen_end_time = System.nanoTime();
 			
 			// Print statistics.
-			double[][] stats = root.getStats();
-			// for (int i = 0; i < stats.length; i++) {
-				// for (int j = 0; j < stats[i].length; j++) {
-					// System.out.print(String.format("%.5f, ", stats[i][j]));
-				// }
-				// System.out.println("");
-			// }
-			
-			int total_circles = 0;
-			double total_area = 0;
-			for (int layer = 0; layer < stats[1].length; layer++) {
-				total_circles += (int) stats[0][layer];
-				total_area += stats[1][layer];
-			}
-			
-			// This is the area of the gap between three circles of radius one arranged to be cotangent and in the shape of an equilateral triangle.
-			// It is calculated as the unit equilateral triangle minus the three segments of the unit circle.
-			// Each segment is a 60 degree slice of a circle minus a unit equilateral triangle spanning from a chord to the origin of its circle.
-			double max_area = Math.sqrt(3)/4 - 3*(Math.PI/6 - Math.sqrt(3)/4);
-			System.out.println(String.format("Total area: %.4f (%.2f%%) Total Circles: %d Max Depth: %d", total_area, total_area / max_area * 100, total_circles, stats[0].length));
+			root.debug();
 			
 			// Create image.
 			long render_start_time = System.nanoTime();
