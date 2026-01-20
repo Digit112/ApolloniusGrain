@@ -1,8 +1,8 @@
 package geometry;
 
-public class LineSegment implements CollisionResult1D {
-	Point a;
-	Point b;
+public final class LineSegment implements LineSegmentLineSegmentIntersection {
+	public Point a;
+	public Point b;
 	
 	public LineSegment(Point a, Point b) {
 		this.a = a;

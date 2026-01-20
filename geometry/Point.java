@@ -1,8 +1,8 @@
 package geometry;
 
-public class Point implements LineSegmentLineSegmentIntersection, LineLineIntersection {
-	double x;
-	double y;
+public final class Point implements LineSegmentLineSegmentIntersection, LineLineIntersection {
+	public double x;
+	public double y;
 	
 	public Point(double x, double y) {
 		this.x = x;

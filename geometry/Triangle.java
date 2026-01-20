@@ -2,9 +2,9 @@ package geometry;
 
 // Three-sided polygon.
 public class Triangle {
-	Point a;
-	Point b;
-	Point c;
+	public Point a;
+	public Point b;
+	public Point c;
 
 	public Triangle(Point a, Point b, Point c) {
 		this.a = a;

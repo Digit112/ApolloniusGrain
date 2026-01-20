@@ -1,4 +1,4 @@
-import java.util.*;
+import java.util.Random;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -88,6 +88,11 @@ class ApolloniusGrain {
 		this.child_a.calculateChildrenToDepth(depth-1, random);
 		this.child_b.calculateChildrenToDepth(depth-1, random);
 		this.child_c.calculateChildrenToDepth(depth-1, random);
+	}
+	
+	// Removes nodes from the top of this tree that are not required for rendering.
+	public ApolloniusGrain getPruned(SgndAlgndRectangle bounds) {
+		return null;
 	}
 	
 	// Recursively generate children until all leaf grains have no greater diameter than the passed threshold.
@@ -441,11 +446,16 @@ public class Apollonius {
 		
 		Random random = new Random();
 		
-		// Camera and image params.
 		SgndAlgndRectangle viewport = new SgndAlgndRectangle(
-			new Point(-0.5, -0.5),
-			new Point( 0.5,  0.5)
+			new Point(-0.5, -2f/3 * Math.sqrt(3)),
+			new Point( 0.5,  1f/6 * Math.sqrt(3))
 		);
+		
+		// Camera and image params.
+		// SgndAlgndRectangle viewport = new SgndAlgndRectangle(
+			// new Point(-0.5, -0.5),
+			// new Point( 0.5,  0.5)
+		// );
 		float aspect_ratio = (float) viewport.aspectRatio();
 		
 		int width = 1024*2;
@@ -454,8 +464,8 @@ public class Apollonius {
 		viewport.translate(new Vector(0.054, 0.154));
 		viewport.zoom(0.5);
 		
-		double final_zoom = 160;
-		int num_frames = 360;
+		double final_zoom = 1;
+		int num_frames = 1;
 		
 		/* ---- END PARAMETERS ---- */
 			

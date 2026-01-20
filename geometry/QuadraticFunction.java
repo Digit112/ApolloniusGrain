@@ -1,15 +1,19 @@
 package geometry;
 
 // Represents an equation of the form y = ax^2 + bx + c
-public class QuadraticFunction implements Function<double, double> {
-	double a;
-	double b;
-	double c;
+public class QuadraticFunction implements Function<Double, Double> {
+	public double a;
+	public double b;
+	public double c;
 	
 	public QuadraticFunction(double a, double b, double c) {
 		this.a = a;
 		this.b = b;
 		this.c = c;
+	}
+	
+	public Double evaluate(Double x) {
+		return a*x*x + b*x + c;
 	}
 	
 	// Returns an array of the two roots.
