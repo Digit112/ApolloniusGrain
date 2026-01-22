@@ -12,7 +12,7 @@ public class Triangle {
 		this.c = c;
 	}
 	
-	public boolean contains(Point p, boolean do_debug) {
+	public boolean contains(Point p) {
 		Vector base = Point.difference(b, a);
 		Vector left_arm = Point.difference(c, a);
 		Vector right_arm = Point.difference(c, b);
@@ -43,18 +43,35 @@ public class Triangle {
 		
 		Vector new_point = Matrix.multiply(triangle_transform, rel_pos);
 		
-		if (do_debug) {
-			System.out.println(String.format("Base Length: %.2f Proj Length: %.2f (Rel: %.2f) Signed Height: %.2f Ratios: %.2f %.2f %.2f",
-				base_len, proj_len, rel_proj_len, signed_height, right_ratio, left_ratio, lower_ratio));
+		// if (do_debug) {
+			// System.out.println(String.format("Base Length: %.2f Proj Length: %.2f (Rel: %.2f) Signed Height: %.2f Ratios: %.2f %.2f %.2f",
+				// base_len, proj_len, rel_proj_len, signed_height, right_ratio, left_ratio, lower_ratio));
 			
-			System.out.println(String.format("%s within %s",
-				p.toString(), this.toString()));
+			// System.out.println(String.format("%s within %s",
+				// p.toString(), this.toString()));
 			
-			System.out.println(String.format("Arms: %s %s %s Drop Point: %s Rel Point: %s Transformed Point: %s",
-				base.toString(), left_arm.toString(), right_arm.toString(), drop.toString(), rel_pos.toString(), new_point.toString()));
-		}
+			// System.out.println(String.format("Arms: %s %s %s Drop Point: %s Rel Point: %s Transformed Point: %s",
+				// base.toString(), left_arm.toString(), right_arm.toString(), drop.toString(), rel_pos.toString(), new_point.toString()));
+		// }
 		
 		return new_point.x >= 0 && new_point.y >= 0 && new_point.x + new_point.y <= 1;
+	}
+	
+	/**
+	* Determines whether any part of this segment is within the passed rectangle.
+	* @return true if the shapes intersect, false otherwise.
+	*/
+	public boolean intersects(SgndAlgndRectangle rect) {
+		if (new LineSegment(a, b).intersects(rect)) return true;
+		if (new LineSegment(c, b).intersects(rect)) return true;
+		if (new LineSegment(a, c).intersects(rect)) return true;
+		
+		// Cover the case where the rectangle is entirely within the triangle.
+		if (contains(rect.a)) return true;
+		
+		// The edges of the triangle do not intersect the rectangle.
+		// At least one point of the rectangle is outside the triangle.
+		return false;
 	}
 	
 	public String toString() {

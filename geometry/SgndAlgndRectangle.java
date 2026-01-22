@@ -39,8 +39,21 @@ public class SgndAlgndRectangle {
 		);
 	}
 	
-	// Decreases the width and height by a factor of the reciprocal of the input value.
-	// Center of the rectangle is fixed in place.
+	/** Determines whether the rectangle contains the given point. */
+	public boolean contains(Point p) {
+		return left() <= p.x && right() >= p.x && bottom() <= p.y && top() >= p.y;
+	}
+	
+	/** Determines whether the passed triangle lies entirely within this rect. */
+	public boolean contains(Triangle t) {
+		return contains(t.a) && contains(t.b) && contains(t.c);
+	}
+	
+	/**
+	* Decreases the width and height by dividing them by the passed factor.
+	* Then center of the rectangle is fixed in place.
+	* @param factor The zoom factor. Values greater than 1 shrink the rectangle, values between 0 and 1 will grow it. Negative values will also invert it.
+	*/
 	public void zoom(double factor) {
 		double half_delta_width  = signedWidth()  * (1 - 1 / factor) / 2;
 		double half_delta_height = signedHeight() * (1 - 1 / factor) / 2;
@@ -49,9 +62,31 @@ public class SgndAlgndRectangle {
 		b = b.translated(new Vector(-half_delta_width, -half_delta_height));
 	}
 	
+	/**
+	* Same as zoom(), but returns a new rectangle instead of modifying the callee.
+	* @return A new rectangle zoomed by the given factor.
+	* @see #zoom(double)
+	*/
+	public SgndAlgndRectangle zoomed(double factor) {
+		double half_delta_width  = signedWidth()  * (1 - 1 / factor) / 2;
+		double half_delta_height = signedHeight() * (1 - 1 / factor) / 2;
+		
+		return new SgndAlgndRectangle(
+			a.translated(new Vector( half_delta_width,  half_delta_height)),
+			b.translated(new Vector(-half_delta_width, -half_delta_height))
+		);
+	}
+	
 	public void translate(Vector offset) {
 		a = a.translated(offset);
 		b = b.translated(offset);
+	}
+	
+	public SgndAlgndRectangle translated(Vector offset) {
+		return new SgndAlgndRectangle(
+			a.translated(offset),
+			b.translated(offset)
+		);
 	}
 	
 	public double signedWidth() {

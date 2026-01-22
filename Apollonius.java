@@ -1,8 +1,10 @@
-import java.util.Random;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Random;
 import javax.imageio.ImageIO;
 
 import geometry.*;
@@ -90,11 +92,6 @@ class ApolloniusGrain {
 		this.child_c.calculateChildrenToDepth(depth-1, random);
 	}
 	
-	// Removes nodes from the top of this tree that are not required for rendering.
-	public ApolloniusGrain getPruned(SgndAlgndRectangle bounds) {
-		return null;
-	}
-	
 	// Recursively generate children until all leaf grains have no greater diameter than the passed threshold.
 	// Pass a random number generator to generate the datum.
 	public void calculateChildrenToGranularity(double min_diameter, Random random) {
@@ -134,6 +131,107 @@ class ApolloniusGrain {
 		);
 	}
 	
+	// Deletes portions of the fractal which would not appear on a render of the passed rectangle.
+	// Returns a grain which should be taken as the new root of the fractal.
+	// Its parent, contributors, and all descendents remaibn. All other circles are disconnected in such a manor as to allow garbage collection.
+	public ApolloniusGrain pruneByExtrication(SgndAlgndRectangle rect) {
+		if (!getDartBounds().intersects(rect)) {
+			throw new Error("Invalid state. Passed rectangle is not within the tree at all!");
+		}
+		
+		if (!isRoot()) {
+			throw new Error("Invalid state. pruneByExtrication must only be called on root.");
+		}
+		
+		// Basically descend as long as only one gap of the current root intersects the rect.
+		ApolloniusGrain root = this;
+		
+		while (true) {
+			// No children to descend to.
+			if (root.isLeaf()) {
+				root.extricate();
+				return root;
+			}
+			
+			boolean child_a_intersects = root.child_a.getDartBounds().intersects(rect);
+			boolean child_b_intersects = root.child_b.getDartBounds().intersects(rect);
+			
+			// Multiple child gaps intersect; stop descent.
+			if (child_a_intersects && child_b_intersects) {
+				root.extricate();
+				return root;
+			}
+			
+			boolean child_c_intersects = root.child_c.getDartBounds().intersects(rect);
+			
+			// Multiple child gaps intersect; stop descent.
+			if (child_c_intersects && (child_a_intersects || child_b_intersects)) {
+				root.extricate();
+				return root;
+			}
+			
+			// At this point, there are either 0 or 1 intersecting child gaps.
+			if (child_a_intersects) root = root.child_a;
+			else if (child_b_intersects) root = root.child_b;
+			else if (child_c_intersects) root = root.child_c;
+			else {
+				// No intersections. Rect is fully enclosed by a circle, outside of any gaps.
+				// Uh... Stop, I guess...
+				root.extricate();
+				return root;
+			}
+		}
+	}
+	
+	// Recursively removes children whose descendents cannot influence a render of the passed region.
+	public void pruneByExcision(SgndAlgndRectangle rect) {
+		if (isLeaf()) return;
+		
+		boolean child_a_intersects = child_a.getDartBounds().intersects(rect);
+		if (!child_a_intersects) child_a.pruneByExcision(rect);
+		else child_a.excise();
+			
+		boolean child_b_intersects = child_b.getDartBounds().intersects(rect);
+		if (!child_b_intersects) child_b.pruneByExcision(rect);
+		else child_b.excise();
+		
+		boolean child_c_intersects = child_c.getDartBounds().intersects(rect);
+		if (!child_c_intersects) child_c.pruneByExcision(rect);
+		else child_c.excise();
+	}
+	
+	// Deletes all internal relations among ancestors, allowing them to be garbage-collected, except this node's parent and contributors.
+	private void extricate() {
+		if (!isRoot() && !isScaffold()) {
+			ApolloniusGrain[] parents = new ApolloniusGrain[] {parent, contributor_a, contributor_b};
+			for (int parent_i = 0; parent_i < 3; parent_i++) {
+				parents[parent_i].extricate();
+				
+				parents[parent_i].parent = null;
+				parents[parent_i].contributor_a = null;
+				parents[parent_i].contributor_b = null;
+			}
+		}
+	}
+	
+	// Deletes all internal relations among descendents, allowing them to be garbage-collected.
+	private void excise() {
+		if (!isLeaf()) {
+			ApolloniusGrain[] children = new ApolloniusGrain[] {child_a, child_b, child_c};
+			for (int child_i = 0; child_i < 3; child_i++) {
+				children[child_i].excise();
+				
+				children[child_i].parent = null;
+				children[child_i].contributor_a = null;
+				children[child_i].contributor_b = null;
+			}
+			
+			child_a = null;
+			child_b = null;
+			child_c = null;
+		}
+	}
+	
 	private ApolloniusGrain getContainmentCircleRecurse(Point p, int current_depth, boolean do_debug) {
 		if (this.circle.contains(p)) {
 			return this;
@@ -146,7 +244,7 @@ class ApolloniusGrain {
 				ApolloniusGrain[] children = new ApolloniusGrain[] {child_a, child_b, child_c};
 				for (int i = 0; i < 3; i++) {
 					Triangle dart_bounds = children[i].getDartBounds();
-					if (dart_bounds.contains(p, do_debug)) {
+					if (dart_bounds.contains(p)) {
 						return children[i].getContainmentCircleRecurse(p, current_depth+1, do_debug);
 					}
 				}
@@ -489,7 +587,7 @@ public class Apollonius {
 		Random random = new Random();
 		
 		SgndAlgndRectangle viewport = new SgndAlgndRectangle(
-			new Point(-0.5, -2f/3 * Math.sqrt(3)),
+			new Point(-0.5, -1f/3 * Math.sqrt(3)),
 			new Point( 0.5,  1f/6 * Math.sqrt(3))
 		);
 		
@@ -503,8 +601,10 @@ public class Apollonius {
 		int width = 1024*2;
 		int height = (int) (width / aspect_ratio);
 		
-		viewport.translate(new Vector(0.054, 0.154));
-		viewport.zoom(0.5);
+		// viewport.translate(new Vector(0.054, 0.154));
+		// viewport.zoom(0.5);
+		
+		SgndAlgndRectangle pruningBounds = viewport.zoomed(2);
 		
 		double final_zoom = 1;
 		int num_frames = 1;
@@ -517,6 +617,9 @@ public class Apollonius {
 		Circle C = new Circle(new Point( 1, -1.0/3*Math.sqrt(3)), 1);
 		ApolloniusGrain root = new ApolloniusGrain(A, B, C, random);
 		
+		root = root.pruneByExtrication(pruningBounds);
+		root.pruneByExcision(pruningBounds);
+		
 		double zoom_per_frame = Math.pow(final_zoom, 1f / num_frames);
 		for (int frame_i = 0; frame_i < num_frames; frame_i++) {
 			double pixel_width = viewport.width() / width;
@@ -524,8 +627,8 @@ public class Apollonius {
 			//for (int i = 0; i < 
 			// Generate fractal.
 			double gen_start_time = System.nanoTime();
-			root.calculateChildrenToDepth(14, random);
-			//root.calculateChildrenToGranularity(pixel_width, random);
+			//root.calculateChildrenToDepth(9, random);
+			root.calculateChildrenToGranularity(pixel_width, random);
 			double gen_end_time = System.nanoTime();
 			
 			// Print statistics.
