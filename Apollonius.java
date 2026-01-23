@@ -9,7 +9,7 @@ import geometry.*;
 
 // This class represents an individual circle in the apollonius grain fractal, called a "grain".
 // Each is the result of finding a circle tangent to three others, its parent plus two contributors. Each grain has three children and is the parent of all three.
-// A node's two contributors are chosen from among the node's parent's parent and parent's contributors. Since order doesn't matter, there are three possibilites, and thus three children.
+// A node's two contributors are chosen from among the node's parent's parent and parent's contributors. Since order doesn't matter, there are three possibilities, and thus three children.
 // The contributor relationships can be extremely complex. Other than those, it is just a ternary tree.
 // In the final fractal, a node's parent and contributors are the three circles it touches which are bigger than it. The smallest of them is the parent.
 class ApolloniusGrain {
