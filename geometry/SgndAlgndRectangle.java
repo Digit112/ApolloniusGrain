@@ -1,5 +1,7 @@
 package geometry;
 
+import java.awt.image.BufferedImage;
+
 // Signed, Axis-Aligned Rectangle.
 // Represents an axis-aligned Rectangle defined by two points.
 // Exchanging the x components of the points negates the signed width of the rectangle, likewise with the y components and signed height.
@@ -115,5 +117,22 @@ public class SgndAlgndRectangle {
 	
 	public double top() {
 		return Math.max(a.y, b.y);
+	}
+	
+	public void draw(BufferedImage img, SgndAlgndRectangle viewport, int rgb) {
+		Vector scale_vector = new Vector(img.getWidth() / viewport.width(), img.getHeight() / viewport.height());
+		SgndAlgndRectangle img_bounds = new SgndAlgndRectangle(
+			new Point(img.getMinX(), img.getMinY()),
+			new Point(img.getWidth()-1, img.getHeight()-1)
+		);
+		
+		Vector m = Vector.difference(a, viewport.a).scaled(scale_vector).clamped(img_bounds);
+		Vector n = Vector.difference(b, viewport.a).scaled(scale_vector).clamped(img_bounds);
+		
+		for (int x = (int) Math.min(m.x, n.x); x <= (int) Math.max(m.x, n.x); x++) {
+			for (int y = (int) Math.min(m.y, n.y); y <= (int) Math.max(m.y, n.y); y++) {
+				img.setRGB(x, y, rgb);
+			}
+		}
 	}
 }

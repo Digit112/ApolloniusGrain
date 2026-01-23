@@ -598,13 +598,13 @@ public class Apollonius {
 		// );
 		float aspect_ratio = (float) viewport.aspectRatio();
 		
-		int width = 1024*2;
+		int width = 1024;
 		int height = (int) (width / aspect_ratio);
 		
 		// viewport.translate(new Vector(0.054, 0.154));
 		// viewport.zoom(0.5);
 		
-		SgndAlgndRectangle pruningBounds = viewport.zoomed(2);
+		//SgndAlgndRectangle pruningBounds = viewport.zoomed(10).translated(new Vector(0.054, -0.064));
 		
 		double final_zoom = 1;
 		int num_frames = 1;
@@ -628,7 +628,7 @@ public class Apollonius {
 			// Generate fractal.
 			double gen_start_time = System.nanoTime();
 			//root.calculateChildrenToDepth(9, random);
-			root.calculateChildrenToGranularity(pixel_width, random);
+			root.calculateChildrenToGranularity(pixel_width*8, random);
 			double gen_end_time = System.nanoTime();
 			
 			// Print statistics.
@@ -638,6 +638,8 @@ public class Apollonius {
 			long render_start_time = System.nanoTime();
 			BufferedImage image = render(root, width, height, viewport);
 			long render_end_time = System.nanoTime();
+			
+			pruningBounds.draw(image, viewport, 0xFF << 16);
 			
 			File fout = new File(String.format("out/%03d.png", frame_i));
 			ImageIO.write(image, "png", fout);

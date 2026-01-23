@@ -21,7 +21,7 @@ public final class Line implements LineLineIntersection {
 	public Line(LinearFunction func) {
 		this.c1 = func.slope;
 		this.c2 = -1;
-		this.b = fun.offset;
+		this.b = func.offset;
 	}
 	
 	// The length of the normal and tangent vectors will be equal to the distance between the passed points.
@@ -62,7 +62,7 @@ public final class Line implements LineLineIntersection {
 	* @return The y-coord making a solution with the given x-coord. NaN or +/-Infinity for "infinite solutions" and "no solutions", respectively.
 	*/
 	public double solveGivenX(double x) {
-		return -(b + c1*y) / c2;
+		return -(b + c1*x) / c2;
 	}
 	
 	/**

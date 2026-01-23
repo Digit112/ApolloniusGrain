@@ -9,6 +9,10 @@ public final class Point implements LineSegmentLineSegmentIntersection, LineLine
 		this.y = y;
 	}
 	
+	public Vector position() {
+		return new Vector(x, y);
+	}
+	
 	public static Vector difference(Point a, Point b) {
 		return new Vector(a.x - b.x, a.y - b.y);
 	}
