@@ -1,5 +1,8 @@
 package geometry;
 
+import java.awt.Color;
+import java.awt.Stroke;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
 // Signed, Axis-Aligned Rectangle.
@@ -119,20 +122,36 @@ public class SgndAlgndRectangle {
 		return Math.max(a.y, b.y);
 	}
 	
-	public void draw(BufferedImage img, SgndAlgndRectangle viewport, int rgb) {
-		Vector scale_vector = new Vector(img.getWidth() / viewport.width(), img.getHeight() / viewport.height());
-		SgndAlgndRectangle img_bounds = new SgndAlgndRectangle(
-			new Point(img.getMinX(), img.getMinY()),
-			new Point(img.getWidth()-1, img.getHeight()-1)
+	/**
+	* Returns the unsigned distance of the passed point to the edge of the rectangle.
+	*/
+	// TODO: Test
+	public double distanceToEdge(Point p) {
+		Vector to_nearest_point = new Vector(
+			Math.min(Math.abs(p.x - a.x), Math.abs(p.x - b.x)),
+			Math.min(Math.abs(p.y - a.y), Math.abs(p.y - b.y))
 		);
 		
-		Vector m = Vector.difference(a, viewport.a).scaled(scale_vector).clamped(img_bounds);
-		Vector n = Vector.difference(b, viewport.a).scaled(scale_vector).clamped(img_bounds);
+		return to_nearest_point.length();
+	}
+	
+	// Draws the outline of a rectangle.
+	public void draw(BufferedImage img, SgndAlgndRectangle viewport, Color color, Stroke stroke) {
+		Vector scale_vector = new Vector(img.getWidth() / viewport.width(), img.getHeight() / viewport.height());
 		
-		for (int x = (int) Math.min(m.x, n.x); x <= (int) Math.max(m.x, n.x); x++) {
-			for (int y = (int) Math.min(m.y, n.y); y <= (int) Math.max(m.y, n.y); y++) {
-				img.setRGB(x, y, rgb);
-			}
-		}
+		Vector m = Vector.difference(a, viewport.a).scaled(scale_vector);
+		Vector n = Vector.difference(b, viewport.a).scaled(scale_vector);
+		
+		Graphics2D g2d = img.createGraphics();
+		g2d.setColor(color);
+		g2d.setStroke(stroke);
+		
+		g2d.drawRect((int) m.x, (int) m.y, (int) (n.x - m.x), (int) (n.y - m.y));
+		
+		g2d.dispose();
+	}
+	
+	public String toString() {
+		return String.format("[] (%.2f, %.2f), (%.2f, %.2f)", a.x, a.y, b.x, b.y);
 	}
 }

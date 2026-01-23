@@ -1,5 +1,11 @@
 package geometry;
 
+import java.awt.Color;
+import java.awt.Polygon;
+import java.awt.Stroke;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+
 // Three-sided polygon.
 public class Triangle {
 	public Point a;
@@ -74,7 +80,27 @@ public class Triangle {
 		return false;
 	}
 	
+	// Draws the outline of a triangle.
+	public void draw(BufferedImage img, SgndAlgndRectangle viewport, Color color, Stroke stroke) {
+		Vector scale_vector = new Vector(img.getWidth() / viewport.width(), img.getHeight() / viewport.height());
+		
+		Vector m = Vector.difference(a, viewport.a).scaled(scale_vector);
+		Vector n = Vector.difference(b, viewport.a).scaled(scale_vector);
+		Vector o = Vector.difference(c, viewport.a).scaled(scale_vector);
+		
+		Graphics2D g2d = img.createGraphics();
+		g2d.setColor(color);
+		
+		g2d.drawPolygon(new Polygon(
+			new int[] {(int) m.x, (int) n.x, (int) o.x},
+			new int[] {(int) m.y, (int) n.y, (int) o.y},
+			3
+		));
+		
+		g2d.dispose();
+	}
+	
 	public String toString() {
-		return String.format("/\\ %s - %s - %s", a.toString(), b.toString(), c.toString());
+		return String.format("/\\ (%.2f, %.2f) (%.2f, %.2f) (%.2f, %.2f)", a.x, a.y, b.x, b.y, c.x, c.y);
 	}
 }

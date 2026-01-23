@@ -30,6 +30,6 @@ public class Circle {
 	}
 	
 	public String toString() {
-		return String.format("(%.2f, %.2f) -- %.2f", origin.x, origin.y, radius);
+		return String.format("() (%.2f, %.2f) %.2f", origin.x, origin.y, radius);
 	}
 }

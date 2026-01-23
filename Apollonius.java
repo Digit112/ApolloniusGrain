@@ -1,7 +1,7 @@
-
+import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.awt.Stroke;
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
@@ -149,23 +149,29 @@ class ApolloniusGrain {
 		while (true) {
 			// No children to descend to.
 			if (root.isLeaf()) {
+				System.out.println("Reached Leaf");
 				root.extricate();
 				return root;
 			}
 			
 			boolean child_a_intersects = root.child_a.getDartBounds().intersects(rect);
 			boolean child_b_intersects = root.child_b.getDartBounds().intersects(rect);
+			boolean child_c_intersects = root.child_c.getDartBounds().intersects(rect);
+			System.out.println(String.format("Cur. Root: %s, A: %s (%b), B: %s (%b), C: %s (%b)",
+				root, root.child_a.getDartBounds(), child_a_intersects, root.child_b.getDartBounds(), child_b_intersects, root.child_c.getDartBounds(), child_c_intersects));
 			
 			// Multiple child gaps intersect; stop descent.
 			if (child_a_intersects && child_b_intersects) {
+				System.out.println("Multiple intersections (A+B)");
 				root.extricate();
 				return root;
 			}
 			
-			boolean child_c_intersects = root.child_c.getDartBounds().intersects(rect);
+			//sboolean child_c_intersects = root.child_c.getDartBounds().intersects(rect);
 			
 			// Multiple child gaps intersect; stop descent.
 			if (child_c_intersects && (child_a_intersects || child_b_intersects)) {
+				System.out.println("Multiple intersections (C+A or C+B)");
 				root.extricate();
 				return root;
 			}
@@ -177,6 +183,7 @@ class ApolloniusGrain {
 			else {
 				// No intersections. Rect is fully enclosed by a circle, outside of any gaps.
 				// Uh... Stop, I guess...
+				System.out.println("Rectangle is consumed.");
 				root.extricate();
 				return root;
 			}
@@ -604,7 +611,7 @@ public class Apollonius {
 		// viewport.translate(new Vector(0.054, 0.154));
 		// viewport.zoom(0.5);
 		
-		//SgndAlgndRectangle pruningBounds = viewport.zoomed(10).translated(new Vector(0.054, -0.064));
+		SgndAlgndRectangle pruningBounds = viewport.zoomed(10).translated(new Vector(0.054, -0.064));
 		
 		double final_zoom = 1;
 		int num_frames = 1;
@@ -617,9 +624,6 @@ public class Apollonius {
 		Circle C = new Circle(new Point( 1, -1.0/3*Math.sqrt(3)), 1);
 		ApolloniusGrain root = new ApolloniusGrain(A, B, C, random);
 		
-		root = root.pruneByExtrication(pruningBounds);
-		root.pruneByExcision(pruningBounds);
-		
 		double zoom_per_frame = Math.pow(final_zoom, 1f / num_frames);
 		for (int frame_i = 0; frame_i < num_frames; frame_i++) {
 			double pixel_width = viewport.width() / width;
@@ -629,6 +633,9 @@ public class Apollonius {
 			double gen_start_time = System.nanoTime();
 			//root.calculateChildrenToDepth(9, random);
 			root.calculateChildrenToGranularity(pixel_width*8, random);
+		
+			root = root.pruneByExtrication(pruningBounds);
+			root.pruneByExcision(pruningBounds);
 			double gen_end_time = System.nanoTime();
 			
 			// Print statistics.
@@ -639,7 +646,7 @@ public class Apollonius {
 			BufferedImage image = render(root, width, height, viewport);
 			long render_end_time = System.nanoTime();
 			
-			pruningBounds.draw(image, viewport, 0xFF << 16);
+			pruningBounds.draw(image, viewport, Color.red, new BasicStroke(4));
 			
 			File fout = new File(String.format("out/%03d.png", frame_i));
 			ImageIO.write(image, "png", fout);
