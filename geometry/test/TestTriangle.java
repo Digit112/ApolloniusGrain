@@ -1,11 +1,14 @@
 package geometry.test;
 
+import geometry.*;
+
 public class TestTriangle extends TestSet {
 	@Fixture
-	public static void unitRect() {
+	public static SgndAlgndRectangle unitSgndAlgndRect() {
+		return new SgndAlgndRectangle(new Point(0, 0), new Point(1, 1));
 	}
 	
 	@Test
-	public static void testRectangleCollision() {
+	public static void testRectangleCollision(Circle unitSgndAlgndRect) {
 	}
 }
