@@ -22,18 +22,33 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+* Marks a method as a test.
+* The method will be executed when the containing TestSet's test() method is run.
+*/
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @interface Test {}
 
+/**
+* Marks a method as a fixture, which supplies a value to be used as an argument to tests and other fixtures.
+* Parameters with the same name as a fixture obtain their binding from the return value of that fixture.
+*/
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @interface Fixture {}
 
+/**
+* Marks a test which is anticipated to fail.
+* Expected failures and unexpected passes are counted separately and the results of expected failures are not displayed.
+*/
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @interface XFail {}
 
+/**
+* Thrown in response to certain errors and exceptions encountered in the course of test execution and dependency resolution.
+*/
 class TestConfigurationError extends Error {
 	public TestConfigurationError(String message) {super(message);}
 	public TestConfigurationError(String message, Throwable cause) {super(message, cause);}
@@ -61,6 +76,9 @@ class TestResult {
 		this.error = error;
 	}
 	
+	/**
+	* 
+	*/
 	public String getResultString() {
 		StringBuilder string = new StringBuilder();
 		
@@ -118,8 +136,8 @@ class TestResult {
 */
 abstract class TestSet {
 	/**
-	* Enumerate all methods on this class. All methods marked @Fixture are collected. Then, all methods marked @Test have their depencies resoloved and they are executed.
-	* Exceptions in dependency resolution and the tests themeselves are collated into statistics and displayed.
+	* Enumerate all methods on this class. All methods marked @Fixture are collected. Then, all methods marked @Test have their dependencies resolved and they are executed.
+	* Exceptions in the tests are collated into statistics and displayed. The return values of tests are neither stored nor analyzed.
 	* @throws TestConfigurationError When parameter resolution fails. For more details, check the return of getCause().
 	*/
 	public final void test(int depth_limit) {
@@ -199,7 +217,7 @@ abstract class TestSet {
 				catch (TestConfigurationError err) {
 					throw err;
 				}
-				catch (Throwable thr) { // Test setup or dependant fixture threw
+				catch (Throwable thr) { // Test setup or dependent fixture threw
 					test = new TestResult(method, TestResult.Result.ERROR, null, thr);
 					errors++;
 				}
@@ -242,23 +260,29 @@ abstract class TestSet {
 		}
 	}
 	
+	public static final void assertEquals(Object a, Object b) {
+		if (!a.equals(b)) {
+			throw new AssertionError(String.format("Entities failed equality assertion: '%s' != '%s'", a.toString(), b.toString()));
+		}
+	}
+	
 	/**
-	* Generates an array of values satisfiying the parameters of the supplied method.
+	* Generates an array of values satisfying the parameters of the supplied method.
 	* <p>
 	* Performs a case-insensitive lookup using the names of the parameters of the passed method into the supplied Map to obtain methods which produce them.
 	* Looked-up fixtures have their own parameters recursively resolving using the same map. A hard depth limit prevents infinite recurse.
 	* <p>
-	* This funuction must be able to look up the names of methods and parameters of all the tests and fixtures in the class and therefore these identifies must be present in the compiled .class file.
+	* This function must be able to look up the names of methods and parameters of all the tests and fixtures in the class and therefore these identifies must be present in the compiled .class file.
 	* @param method The method to obtain the parameters for.
 	* @param fixtures A Map of strings (fixture names) onto methods which return those named values.
 	* @param recursesRemaining The depth limit after which to throw.
 	* @return An array of objects returned by fixtures with names matching the parameters of the passed method which may be supplied in the course of invoking the passed method.
 	* @throws IllegalStateException When a parameter name is not a key into the fixtures dict and a suitable object can therefore not be resolved for that parameter.
 	* @throws IllegalAccessException When, in the course of recursively invoking fixtures' dependencies, an invocation fails due to the fixture's access control restrictions.
-	* @throws IllegalArgumentException When, in the course of recursively invoking fixtures' dependencies, an invocation fails due to a type mismatch between the parameteer type and return type of the fixture with the same name.
+	* @throws IllegalArgumentException When, in the course of recursively invoking fixtures' dependencies, an invocation fails due to a type mismatch between the parameter type and return type of the fixture with the same name.
 	* @throws Throwable When a fixture throws an error, that error is rethrown.
 	*/
-	private final Object[] resolveParameters(Method method, Map<String, Method> fixtures, int recursesRemaining) throws Throwable {
+	private final Object[] resolveParameters(Method method, Map<String, Method> fixtures, int recursesRemaining) {
 		if (recursesRemaining == 0)
 			throw new TestConfigurationError("Fixture depth limit exceeded. Likely caused by an infinite loop in fixture dependencies.");
 		
@@ -290,8 +314,9 @@ abstract class TestSet {
 					throw new Error(String.format( // Should be impossible since we always pass "this"....
 						"Unable to run fixture '%s' because it is an instance method but recieved a null object.", name), cause);
 				}
-				catch (InvocationTargetException exc) {
-					throw exc.getCause();
+				catch (InvocationTargetException cause) {
+					throw new TestConfigurationError(
+						String.format("Exception encountered during invocation of fixture '%s'", name), cause.getCause());
 				}
 			}
 			else {
@@ -308,6 +333,7 @@ abstract class TestSet {
 
 public class TestMain {
 	public static void main(String[] args) {
-		new TestTriangle().test(1024);
+		new TestTriangle().test(12);
+		new TestLineSegment().test(12);
 	}
 }

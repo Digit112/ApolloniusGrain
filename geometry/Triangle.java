@@ -32,7 +32,7 @@ public class Triangle {
 		double proj_sqr_len = proj_len*proj_len;
 		double rel_proj_len = proj_len / base_len;
 		
-		// Intersection of the base with a line dropped from the shared vertex of the armss down perpendicular to the base.
+		// Intersection of the base with a line dropped from the shared vertex of the arms down perpendicular to the base.
 		Vector drop = new Vector(rel_proj_len * base.x + a.x, rel_proj_len * base.y + a.y);
 		
 		double signed_height = Vector.dot(left_arm, new Vector(-base.y, base.x).normalized());

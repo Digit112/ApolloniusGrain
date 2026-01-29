@@ -26,7 +26,7 @@ public final class LineSegment implements LineSegmentLineSegmentIntersection {
 		// Check collision with left side.
 		double left_t = (rect.left() - a.x) / (b.x - a.x);
 		if (left_t >= 0 && left_t <= 1) {
-			double left_col_y = (b.y - a.y) * left_t;
+			double left_col_y = (b.y - a.y) * left_t + a.y;
 			if (left_col_y >= rect.bottom() && left_col_y <= rect.top()) return true; 
 		}
 		
