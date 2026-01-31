@@ -1,3 +1,6 @@
+import java.lang.reflect.Method;
+import java.lang.StringBuilder;
+
 /**
 * Represents a test's method and result, including thrown errors.
 */
