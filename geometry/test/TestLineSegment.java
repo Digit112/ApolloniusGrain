@@ -1,6 +1,7 @@
 package geometry.test;
 
 import geometry.*;
+import test.TestSet;
 
 public class TestLineSegment extends TestSet {
 	@Test
