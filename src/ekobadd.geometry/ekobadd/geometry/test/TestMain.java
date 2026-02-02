@@ -1,4 +1,4 @@
-package geometry.test;
+package ekobadd.geometry.test;
 
 public class TestMain {
 	public static void main(String[] args) {

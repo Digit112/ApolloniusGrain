@@ -1,3 +1,5 @@
+package ekobadd.test;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -17,7 +19,7 @@ import java.util.Map;
 * <p>
 * Errors in the construction of the test class and in the resolution of fixtures are reported as "ERROR", as opposed to a test failure, which is an error caught from a test invocation and is reported as "FAIL".
 */
-abstract class TestSet {
+public abstract class TestSet {
 	/**
 	* Enumerate all methods on this class. All methods marked @Fixture are collected. Then, all methods marked @Test have their dependencies resolved and they are executed.
 	* Exceptions in the tests are collated into statistics and displayed. The return values of tests are neither stored nor analyzed.

@@ -1,4 +1,4 @@
-package geometry;
+package ekobadd.geometry;
 
 public class Matrix {
 	double[][] d;

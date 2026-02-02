@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.util.Random;
 import javax.imageio.ImageIO;
 
-import geometry.*;
+import ekobadd.geometry.*;
 
 // This class represents an individual circle in the apollonius grain fractal, called a "grain".
 // Each is the result of finding a circle tangent to three others, its parent plus two contributors. Each grain has three children and is the parent of all three.

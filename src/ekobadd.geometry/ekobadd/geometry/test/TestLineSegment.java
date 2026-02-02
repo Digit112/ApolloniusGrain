@@ -1,7 +1,7 @@
-package geometry.test;
+package ekobadd.geometry.test;
 
-import geometry.*;
-import test.TestSet;
+import ekobadd.geometry.*;
+import ekobadd.test.*;
 
 public class TestLineSegment extends TestSet {
 	@Test

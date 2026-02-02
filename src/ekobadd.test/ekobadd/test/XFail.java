@@ -1,12 +1,14 @@
+package ekobadd.test;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
-* Marks a method as a fixture, which supplies a value to be used as an argument to tests and other fixtures.
-* Parameters with the same name as a fixture obtain their binding from the return value of that fixture.
+* Marks a test which is anticipated to fail.
+* Expected failures and unexpected passes are counted separately and the results of expected failures are not displayed.
 */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@interface Fixture {}
+public @interface XFail {}

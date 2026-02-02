@@ -1,3 +1,5 @@
+package ekobadd.test;
+
 /**
 * Thrown in response to certain errors and exceptions encountered in the course of test execution and dependency resolution.
 */

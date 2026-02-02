@@ -1,4 +1,4 @@
-package geometry;
+package ekobadd.geometry;
 
 // Represents an equation of the form y = ax^2 + bx + c
 public class QuadraticFunction implements Function<Double, Double> {

@@ -1,4 +1,4 @@
-package geometry;
+package ekobadd.geometry;
 
 // Represents an equation of the form y = mx + b
 public class LinearFunction implements Function<Double, Double> {

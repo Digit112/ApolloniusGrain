@@ -1,4 +1,4 @@
-package geometry;
+package ekobadd.geometry;
 
 import java.awt.Color;
 import java.awt.Stroke;

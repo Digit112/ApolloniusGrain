@@ -1,4 +1,4 @@
-package geometry;
+package ekobadd.geometry;
 
 public class Vector {
 	public double x;

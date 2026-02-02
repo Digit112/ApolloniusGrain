@@ -1,4 +1,4 @@
-package geometry;
+package ekobadd.geometry;
 
 public final class Point implements LineSegmentLineSegmentIntersection, LineLineIntersection {
 	public double x;

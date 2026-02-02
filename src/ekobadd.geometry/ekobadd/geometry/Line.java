@@ -1,4 +1,4 @@
-package geometry;
+package ekobadd.geometry;
 
 // Represents an equation of the form c1*x + c2*y + b = 0;
 public final class Line implements LineLineIntersection {
