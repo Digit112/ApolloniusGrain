@@ -19,6 +19,8 @@ public final class LineSegment implements LineSegmentLineSegmentIntersection {
 	* @return true if the shapes intersect, false otherwise.
 	*/
 	public boolean intersects(SgndAlgndRectangle rect) {
+		// System.out.println(String.format("%s intersects %s", toString(), rect.toString()));
+		
 		// First check if an endpoint is within the rectangle.
 		// This covers the case where the line is fully within the rectangle.
 		if (rect.contains(a)) return true;
@@ -33,26 +35,30 @@ public final class LineSegment implements LineSegmentLineSegmentIntersection {
 		// Check collision with right side.
 		double right_t = (rect.right() - a.x) / (b.x - a.x);
 		if (right_t >= 0 && right_t <= 1) {
-			double right_col_y = (b.y - a.y) * right_t;
+			double right_col_y = (b.y - a.y) * right_t + a.y;
 			if (right_col_y >= rect.bottom() && right_col_y <= rect.top()) return true;
 		}
 		
 		// Check collision with top side.
 		double top_t = (rect.top() - a.y) / (b.y - a.y);
 		if (top_t >= 0 && top_t <= 1) {
-			double top_col_x = (b.x - a.x) * top_t;
+			double top_col_x = (b.x - a.x) * top_t + a.x;
 			if (top_col_x >= rect.left() && top_col_x <= rect.right()) return true; 
 		}
 		
 		// Check collision with bottom side.
 		double bottom_t = (rect.bottom() - a.y) / (b.y - a.y);
 		if (bottom_t >= 0 && bottom_t <= 1) {
-			double bottom_col_x = (b.x - a.x) * bottom_t;
+			double bottom_col_x = (b.x - a.x) * bottom_t + a.x;
 			if (bottom_col_x >= rect.left() && bottom_col_x <= rect.right()) return true; 
 		}
 		
 		// At least one endpoint is outside the rect.
 		// The segment does not intersect any of the rect's sides.
 		return false;
+	}
+	
+	public String toString() {
+		return String.format("-- (%.2f, %.2f), (%.2f, %.2f)", a.x, a.y, b.x, b.y);
 	}
 }

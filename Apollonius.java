@@ -149,7 +149,7 @@ class ApolloniusGrain {
 		while (true) {
 			// No children to descend to.
 			if (root.isLeaf()) {
-				System.out.println("Reached Leaf");
+				// System.out.println("Reached Leaf");
 				root.extricate();
 				return root;
 			}
@@ -157,12 +157,12 @@ class ApolloniusGrain {
 			boolean child_a_intersects = root.child_a.getDartBounds().intersects(rect);
 			boolean child_b_intersects = root.child_b.getDartBounds().intersects(rect);
 			boolean child_c_intersects = root.child_c.getDartBounds().intersects(rect);
-			System.out.println(String.format("Cur. Root: %s, A: %s (%b), B: %s (%b), C: %s (%b)",
-				root, root.child_a.getDartBounds(), child_a_intersects, root.child_b.getDartBounds(), child_b_intersects, root.child_c.getDartBounds(), child_c_intersects));
+			// System.out.println(String.format("Cur. Root: %s, A: %s (%b), B: %s (%b), C: %s (%b)",
+				//root, root.child_a.getDartBounds(), child_a_intersects, root.child_b.getDartBounds(), child_b_intersects, root.child_c.getDartBounds(), child_c_intersects));
 			
 			// Multiple child gaps intersect; stop descent.
 			if (child_a_intersects && child_b_intersects) {
-				System.out.println("Multiple intersections (A+B)");
+				// System.out.println("Multiple intersections (A+B)");
 				root.extricate();
 				return root;
 			}
@@ -171,7 +171,7 @@ class ApolloniusGrain {
 			
 			// Multiple child gaps intersect; stop descent.
 			if (child_c_intersects && (child_a_intersects || child_b_intersects)) {
-				System.out.println("Multiple intersections (C+A or C+B)");
+				// System.out.println("Multiple intersections (C+A or C+B)");
 				root.extricate();
 				return root;
 			}
@@ -190,21 +190,24 @@ class ApolloniusGrain {
 		}
 	}
 	
-	// Recursively removes children whose descendents cannot influence a render of the passed region.
+	// Recursively removes children whose descendants cannot influence a render of the passed region.
 	public void pruneByExcision(SgndAlgndRectangle rect) {
 		if (isLeaf()) return;
 		
-		boolean child_a_intersects = child_a.getDartBounds().intersects(rect);
-		if (!child_a_intersects) child_a.pruneByExcision(rect);
-		else child_a.excise();
-			
-		boolean child_b_intersects = child_b.getDartBounds().intersects(rect);
-		if (!child_b_intersects) child_b.pruneByExcision(rect);
-		else child_b.excise();
+		Triangle child_a_bounds = child_a.getDartBounds();
+		boolean child_a_intersects = child_a_bounds.intersects(rect);
+		if (!child_a_intersects) child_a.excise();
+		else child_a.pruneByExcision(rect);
 		
-		boolean child_c_intersects = child_c.getDartBounds().intersects(rect);
-		if (!child_c_intersects) child_c.pruneByExcision(rect);
-		else child_c.excise();
+		Triangle child_b_bounds = child_b.getDartBounds();
+		boolean child_b_intersects = child_b_bounds.intersects(rect);
+		if (!child_b_intersects) child_b.excise();
+		else child_b.pruneByExcision(rect);
+		
+		Triangle child_c_bounds = child_c.getDartBounds();
+		boolean child_c_intersects = child_c_bounds.intersects(rect);
+		if (!child_c_intersects) child_c.excise();
+		else child_c.pruneByExcision(rect);
 	}
 	
 	// Deletes all internal relations among ancestors, allowing them to be garbage-collected, except this node's parent and contributors.
@@ -221,7 +224,7 @@ class ApolloniusGrain {
 		}
 	}
 	
-	// Deletes all internal relations among descendents, allowing them to be garbage-collected.
+	// Deletes all internal relations among descendants, allowing them to be garbage-collected.
 	private void excise() {
 		if (!isLeaf()) {
 			ApolloniusGrain[] children = new ApolloniusGrain[] {child_a, child_b, child_c};
@@ -573,7 +576,7 @@ public class Apollonius {
 				int pixel = 0;
 				
 				if (grain != null) {
-					pixel = grain.datum & 0xFFFFFF;
+					pixel = grain.datum;// & 0x7F7F7F + 0x505050;
 				}
 				// //int val = (int) (255 * (1 - Math.pow(3, -(float) grain.depth / 10)));
 				// int val = grain.depth % 2 * 255;
@@ -591,12 +594,12 @@ public class Apollonius {
     public static void main(String[] args) throws IOException {
         System.out.println("Hello, World");
 		
-		Random random = new Random();
+		Random random = new Random(2);
 		
 		SgndAlgndRectangle viewport = new SgndAlgndRectangle(
 			new Point(-0.5, -1f/3 * Math.sqrt(3)),
 			new Point( 0.5,  1f/6 * Math.sqrt(3))
-		);
+		).translated(new Vector(0.155, 0.19985));
 		
 		// Camera and image params.
 		// SgndAlgndRectangle viewport = new SgndAlgndRectangle(
@@ -608,13 +611,8 @@ public class Apollonius {
 		int width = 1024;
 		int height = (int) (width / aspect_ratio);
 		
-		// viewport.translate(new Vector(0.054, 0.154));
-		// viewport.zoom(0.5);
-		
-		SgndAlgndRectangle pruningBounds = viewport.zoomed(10).translated(new Vector(0.054, -0.064));
-		
-		double final_zoom = 1;
-		int num_frames = 1;
+		double final_zoom = 16000;
+		int num_frames = 4;
 		
 		/* ---- END PARAMETERS ---- */
 			
@@ -624,7 +622,7 @@ public class Apollonius {
 		Circle C = new Circle(new Point( 1, -1.0/3*Math.sqrt(3)), 1);
 		ApolloniusGrain root = new ApolloniusGrain(A, B, C, random);
 		
-		double zoom_per_frame = Math.pow(final_zoom, 1f / num_frames);
+		double zoom_per_frame = Math.pow(final_zoom, 1f / (num_frames-1));
 		for (int frame_i = 0; frame_i < num_frames; frame_i++) {
 			double pixel_width = viewport.width() / width;
 			
@@ -632,21 +630,19 @@ public class Apollonius {
 			// Generate fractal.
 			double gen_start_time = System.nanoTime();
 			//root.calculateChildrenToDepth(9, random);
-			root.calculateChildrenToGranularity(pixel_width*8, random);
+			root.calculateChildrenToGranularity(pixel_width, random);
 		
-			root = root.pruneByExtrication(pruningBounds);
-			root.pruneByExcision(pruningBounds);
+			root = root.pruneByExtrication(viewport);
+			root.pruneByExcision(viewport);
 			double gen_end_time = System.nanoTime();
 			
 			// Print statistics.
-			root.debug();
+			//root.debug();
 			
 			// Create image.
 			long render_start_time = System.nanoTime();
 			BufferedImage image = render(root, width, height, viewport);
 			long render_end_time = System.nanoTime();
-			
-			pruningBounds.draw(image, viewport, Color.red, new BasicStroke(4));
 			
 			File fout = new File(String.format("out/%03d.png", frame_i));
 			ImageIO.write(image, "png", fout);
