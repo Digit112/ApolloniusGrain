@@ -599,7 +599,7 @@ public class Apollonius {
 		SgndAlgndRectangle viewport = new SgndAlgndRectangle(
 			new Point(-0.5, -1f/3 * Math.sqrt(3)),
 			new Point( 0.5,  1f/6 * Math.sqrt(3))
-		).translated(new Vector(0.155, 0.19985));
+		).translated(new Vector(0.155, 0.19985)).zoomed(1.5);
 		
 		// Camera and image params.
 		// SgndAlgndRectangle viewport = new SgndAlgndRectangle(
@@ -612,7 +612,7 @@ public class Apollonius {
 		int height = (int) (width / aspect_ratio);
 		
 		double final_zoom = 16000;
-		int num_frames = 4;
+		int num_frames = 14 * 24;
 		
 		/* ---- END PARAMETERS ---- */
 			
