@@ -20,17 +20,22 @@ import java.util.Map;
 * Errors in the construction of the test class and in the resolution of fixtures are reported as "ERROR", as opposed to a test failure, which is an error caught from a test invocation and is reported as "FAIL".
 */
 public abstract class TestSet {
+	/** Proxy for {@link #test(int) test} with default values. */
+	public final TestSetResult test() {
+		return test(256);
+	}
+	
 	/**
 	* Runs all methods on this class marked @Test and returns the test results.
 	* All methods marked @Fixture are collected. Then, all methods marked @Test have their dependencies resolved and they are executed.
 	* Exceptions in the tests are collated into statistics and displayed. The return values of tests are neither stored nor analyzed.
 	* @throws TestConfigurationError When parameter resolution fails. For more details, check the return of getCause().
 	*/
-	public final void test(int depth_limit) {
+	public final TestSetResult test(int depth_limit) {
+		TestSetResult results = new TestSetResult(getClass().getName());
+		
 		Method methods[] = getClass().getDeclaredMethods();
 		HashMap<String, Method> fixtures = new HashMap<String, Method>();
-		
-		ArrayList<TestResult> tests = new ArrayList<TestResult>();
 		int passes = 0;
 		int unxpasses = 0;
 		int fails = 0;
@@ -54,84 +59,56 @@ public abstract class TestSet {
 				boolean isExpectedFail = method.isAnnotationPresent(XFail.class);
 				TestResult test;
 				
-				try {  // Catches errors resolving test params
-					Object[] parameters = resolveParameters(method, fixtures, depth_limit);
+				Object[] parameters = resolveParameters(method, fixtures, depth_limit);
+				
+				try { // Catches errors thrown by the test itself.
+					try { // Catches errors that can be thrown by the invoke() method specifically.
+						method.invoke(this, parameters);
+					}
+					catch (IllegalArgumentException cause) {
+						throw new TestConfigurationError(String.format(
+							"Unable to run test '%s' because at least one of its dependent fixtures did not return a type which can be unwrapped and/or converted to the specified type of the parameter.", method.getName()), cause);
+					}
+					catch (IllegalAccessException cause) {
+						throw new TestConfigurationError(String.format(
+							"Unable to run test '%s' due to the underlying method's access control.", method.getName()), cause);
+					}
+					catch (NullPointerException cause) {
+						throw new Error(String.format( // Should be impossible since we always pass "this"....
+							"Unable to run test '%s' because it is an instance method but recieved a null object.", method.getName()), cause);
+					}
+					catch (InvocationTargetException exc) {
+						throw exc.getCause();
+					}
 					
-					try { // Catches errors thrown by the test itself.
-						try { // Catches errors that can be thrown by the invoke() method specifically.
-							method.invoke(this, parameters);
-						}
-						catch (IllegalArgumentException cause) {
-							throw new TestConfigurationError(String.format(
-								"Unable to run test '%s' because at least one of its dependent fixtures did not return a type which can be unwrapped and/or converted to the specified type of the parameter.", method.getName()), cause);
-						}
-						catch (IllegalAccessException cause) {
-							throw new TestConfigurationError(String.format(
-								"Unable to run test '%s' due to the underlying method's access control.", method.getName()), cause);
-						}
-						catch (NullPointerException cause) {
-							throw new Error(String.format( // Should be impossible since we always pass "this"....
-								"Unable to run test '%s' because it is an instance method but recieved a null object.", method.getName()), cause);
-						}
-						catch (InvocationTargetException exc) {
-							throw exc.getCause();
-						}
-						
-						if (isExpectedFail) { // Test did not throw.
-							test = new TestResult(method, TestResult.Result.UNXPASS, null, null);
-							unxpasses++;
-						}
-						else {
-							test = new TestResult(method, TestResult.Result.PASS, null, null);
-							passes++;
-						}
+					if (isExpectedFail) { // Test did not throw.
+						test = new TestResult(method, TestResult.Result.UNXPASS, null);
+						unxpasses++;
 					}
-					catch (TestConfigurationError err) {
-						throw err;
-					}
-					catch (Throwable thr) {
-						if (isExpectedFail) { // Test threw
-							test = new TestResult(method, TestResult.Result.XFAIL, thr, null);
-							xfails++;
-						}
-						else {
-							test = new TestResult(method, TestResult.Result.FAIL, thr, null);
-							fails++;
-						}
+					else {
+						test = new TestResult(method, TestResult.Result.PASS, null);
+						passes++;
 					}
 				}
 				catch (TestConfigurationError err) {
 					throw err;
 				}
-				catch (Throwable thr) { // Test setup or dependent fixture threw
-					test = new TestResult(method, TestResult.Result.ERROR, null, thr);
-					errors++;
+				catch (Throwable thr) {
+					if (isExpectedFail) { // Test threw
+						test = new TestResult(method, TestResult.Result.XFAIL, thr);
+						xfails++;
+					}
+					else {
+						test = new TestResult(method, TestResult.Result.FAIL, thr);
+						fails++;
+					}
 				}
 				
-				// Individual test result printout.
-				System.out.print(test.getResultString());
-				tests.add(test);
+				results.addResult(test);
 			}
 		}
 		
-		// Summary printout.
-		System.out.println();
-		System.out.println(String.format("Ran %d tests...", tests.size()));
-		for (TestResult test : tests) {
-			System.out.print(test.getResultLetter());
-		}
-		System.out.println();
-		
-		System.out.println(String.format("PASS: %d", passes));
-		if (unxpasses > 0)
-			System.out.println(String.format("UNX PASS: %d", unxpasses));
-		
-		System.out.println(String.format("FAIL: %d", fails));
-		if (xfails > 0)
-			System.out.println(String.format("EXP FAIL: %d", xfails));
-		
-		if (errors > 0)
-			System.out.println(String.format("ERROR: %d", errors));
+		return results;
 	}
 	
 	public final void assertThrows(Runnable runnable, Class exceptionClass) {
@@ -187,19 +164,19 @@ public abstract class TestSet {
 				}
 				catch (IllegalAccessException cause) {
 					throw new TestConfigurationError(String.format(
-						"Unable to run fixture '%s' due to the underlying method's access control.", name), cause);
+						"Unable to run fixture '%s' due to the underlying method's access control.", fixture.getName()), cause);
 				}
 				catch (IllegalArgumentException cause) {
 					throw new TestConfigurationError(String.format(
-						"Unable to run fixture '%s' because at least one of its dependent fixtures did not return a type which can be unwrapped and/or converted to the specified type of the parameter.", name), cause);
+						"Unable to run fixture '%s' because at least one of its dependent fixtures did not return a type which can be unwrapped and/or converted to the specified type of the parameter.", fixture.getName()), cause);
 				}
 				catch (NullPointerException cause) {
 					throw new Error(String.format( // Should be impossible since we always pass "this"....
-						"Unable to run fixture '%s' because it is an instance method but recieved a null object.", name), cause);
+						"Unable to run fixture '%s' because it is an instance method but recieved a null object.", fixture.getName()), cause);
 				}
 				catch (InvocationTargetException cause) {
 					throw new TestConfigurationError(
-						String.format("Exception encountered during invocation of fixture '%s'", name), cause.getCause());
+						String.format("Exception encountered during invocation of fixture '%s'", fixture.getName()), cause.getCause());
 				}
 			}
 			else {

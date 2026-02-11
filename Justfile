@@ -2,7 +2,7 @@ help:
 	just --list
 
 clean:
-    rm -rf output
+    rm -rf build
 
 build:
 	javac -parameters -d build --module-source-path src --module ekobadd.geometry
