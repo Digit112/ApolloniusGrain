@@ -7,8 +7,7 @@ clean:
 build:
 	javac -d build --module-source-path src --module ekobadd.geometry
 	javac -d build --module-source-path src --module ekobadd.test
-	#javac -d build -classpath build/ekobadd.geometry Apollonius.java
-	javac  --module-path build --add-modules ekobadd.geometry Apollonius.java
+	javac --module-path build --add-modules ekobadd.geometry Apollonius.java
 
 rebuild: clean build
 
