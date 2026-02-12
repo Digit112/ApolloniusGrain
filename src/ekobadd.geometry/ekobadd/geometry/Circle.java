@@ -9,6 +9,15 @@ public class Circle {
 		this.radius = radius;
 	}
 	
+	public void scale(double factor) {
+		radius *= factor;
+		origin.scale(factor);
+	}
+	
+	public void translate(Vector offset) {
+		origin.translate(offset);
+	}
+	
 	public boolean contains(Point p) {
 		double dx = p.x - origin.x;
 		double dy = p.y - origin.y;

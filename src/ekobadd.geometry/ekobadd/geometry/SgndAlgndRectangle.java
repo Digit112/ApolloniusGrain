@@ -55,24 +55,24 @@ public class SgndAlgndRectangle {
 	}
 	
 	/**
-	* Decreases the width and height by dividing them by the passed factor.
-	* Then center of the rectangle is fixed in place.
-	* @param factor The zoom factor. Values greater than 1 shrink the rectangle, values between 0 and 1 will grow it. Negative values will also invert it.
+	* Modifies the width and height by multiplying them by the passed factor.
+	* The center of the rectangle is fixed in place.
+	* @param scale The scale factor. Values greater than 1 grow the rectangle, values between 0 and 1 will shrink it. Negative values will invert it.
 	*/
-	public void zoom(double factor) {
-		double half_delta_width  = signedWidth()  * (1 - 1 / factor) / 2;
-		double half_delta_height = signedHeight() * (1 - 1 / factor) / 2;
+	public void scale(double scale) {
+		double half_delta_width  = signedWidth()  * (1 - scale) / 2;
+		double half_delta_height = signedHeight() * (1 - scale) / 2;
 		
 		a = a.translated(new Vector( half_delta_width,  half_delta_height));
 		b = b.translated(new Vector(-half_delta_width, -half_delta_height));
 	}
 	
 	/**
-	* Same as zoom(), but returns a new rectangle instead of modifying the callee.
-	* @return A new rectangle zoomed by the given factor.
-	* @see #zoom(double)
+	* Same as scale(), but returns a new rectangle instead of modifying the callee.
+	* @return A new rectangle scaled by the given factor.
+	* @see #scale(double)
 	*/
-	public SgndAlgndRectangle zoomed(double factor) {
+	public SgndAlgndRectangle scaled(double factor) {
 		double half_delta_width  = signedWidth()  * (1 - 1 / factor) / 2;
 		double half_delta_height = signedHeight() * (1 - 1 / factor) / 2;
 		
@@ -80,6 +80,26 @@ public class SgndAlgndRectangle {
 			a.translated(new Vector( half_delta_width,  half_delta_height)),
 			b.translated(new Vector(-half_delta_width, -half_delta_height))
 		);
+	}
+	
+	/**
+	* Equivalent to scaling by the reciprocal of the supplied factor.
+	* The center of the rectangle is fixed in place.
+	* @param factor The zoom factor. Values greater than 1 shrink the rectangle, values between 0 and 1 will grow it. Negative values will also invert it.
+	* @see #scale(double)
+	*/
+	public void zoom(double factor) {
+		scale(1 / factor);
+	}
+	
+	/**
+	* Same as zoom(), but returns a new rectangle instead of modifying the callee.
+	* @return A new rectangle zoomed by the given factor.
+	* @see #zoom(double)
+	* @see #scale(double)
+	*/
+	public SgndAlgndRectangle zoomed(double factor) {
+		return scaled(1 / factor);
 	}
 	
 	public void translate(Vector offset) {

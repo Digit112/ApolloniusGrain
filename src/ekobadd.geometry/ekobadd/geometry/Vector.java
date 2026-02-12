@@ -36,6 +36,15 @@ public class Vector {
 		return new Vector(x/len*new_len, y/len*new_len);
 	}
 	
+	public Vector negated() {
+		return new Vector(-x, -y);
+	}
+	
+	public void negate() {
+		x = -x;
+		y = -y;
+	}
+	
 	public static Vector difference(Point a, Point b) {
 		return new Vector(a.x - b.x, a.y - b.y);
 	}

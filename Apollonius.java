@@ -210,6 +210,32 @@ class ApolloniusGrain {
 		else child_c.pruneByExcision(rect);
 	}
 	
+	/** Modifies the tree to preveent floating-point precision issues.
+	* Moves this circle to the origin and scales it by a power of two to have a radius in the range of 0.5 to 1.
+	* Moves all children accordingly.
+	* @return A viewport, scaled and translated to produce the same render as the passed viewport would have before this call.
+	*/
+	public SgndAlgndRectangle renormalize(SgndAlgndRectangle viewport) {
+		int scale = 2 << (int) (Math.log(1 / radius()) / Math.log(2));
+		Vector offset = circle.origin.position().negated();
+		
+		renormalize(offset, scale);
+		
+		return viewport.translated(offset).scaled(scale);
+	}
+	
+	/** Transform the entire tree by the given translation followed by scaling about the origin. */
+	private void renormalize(Vector offset, int scale) {
+		circle.translate(offset);
+		circle.scale(scale);
+		
+		if (!isLeaf()) {
+			child_a.renormalize(offset, scale);
+			child_b.renormalize(offset, scale);
+			child_c.renormalize(offset, scale);
+		}
+	}
+	
 	// Deletes all internal relations among ancestors, allowing them to be garbage-collected, except this node's parent and contributors.
 	private void extricate() {
 		if (!isRoot() && !isScaffold()) {
@@ -612,7 +638,7 @@ public class Apollonius {
 		int height = (int) (width / aspect_ratio);
 		
 		double final_zoom = 16000;
-		int num_frames = 14 * 24;
+		int num_frames = 14;// * 24;
 		
 		/* ---- END PARAMETERS ---- */
 			
@@ -629,11 +655,16 @@ public class Apollonius {
 			//for (int i = 0; i < 
 			// Generate fractal.
 			double gen_start_time = System.nanoTime();
+			
 			//root.calculateChildrenToDepth(9, random);
 			root.calculateChildrenToGranularity(pixel_width, random);
 		
+			ApolloniusGrain oldRoot = root;
 			root = root.pruneByExtrication(viewport);
 			root.pruneByExcision(viewport);
+			
+			//if (oldRoot != root) viewport = root.renormalize(viewport);
+			
 			double gen_end_time = System.nanoTime();
 			
 			// Print statistics.

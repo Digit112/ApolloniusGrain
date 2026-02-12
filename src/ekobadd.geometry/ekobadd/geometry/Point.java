@@ -13,8 +13,18 @@ public final class Point implements LineSegmentLineSegmentIntersection, LineLine
 		return new Vector(x, y);
 	}
 	
+	public void scale(double factor) {
+		x *= factor;
+		y *= factor;
+	}
+	
 	public static Vector difference(Point a, Point b) {
 		return new Vector(a.x - b.x, a.y - b.y);
+	}
+	
+	public void translate(Vector offset) {
+		x += offset.x;
+		y += offset.y;
 	}
 	
 	public Point translated(Vector a) {
