@@ -1,3 +1,6 @@
 *.class
 *.png
 *.mp4
+
+build/*
+docs/*

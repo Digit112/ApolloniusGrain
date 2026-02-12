@@ -92,7 +92,7 @@ public class TestSetResult {
 		summary.append(formatOneCharResults(useColor) + "\n");
 		
 		int numPassed = countsPerResultType.get(TestResult.Result.PASS);
-		int numTotal = results.length();
+		int numTotal = results.size();
 		
 		summary.append(String.format("(%d / %d PASSED)", numPassed, numTotal));
 		if (numPassed < numTotal) {

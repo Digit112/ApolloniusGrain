@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
-* Quick & Dirty unit-tester meant to be extended.
+* Quick &amp; Dirty unit-tester meant to be extended.
 * Enumerates all methods and runs anything marked with @Test. Errors are caught and printed. Sums of passes and fails are displayed after testing is complete.
 * <p>
 * Fixtures may be supplied and are identified with the @Fixture annotation. Parameters are matched by name to the fixture method which should supply them. Matching is case-insensitive.
@@ -26,7 +26,8 @@ public abstract class TestSet {
 	}
 	
 	/**
-	* Enumerate all methods on this class. All methods marked @Fixture are collected. Then, all methods marked @Test have their dependencies resolved and they are executed.
+	* Runs all methods on this class marked @Test and returns the test results.
+	* All methods marked @Fixture are collected. Then, all methods marked @Test have their dependencies resolved and they are executed.
 	* Exceptions in the tests are collated into statistics and displayed. The return values of tests are neither stored nor analyzed.
 	* @throws TestConfigurationError When parameter resolution fails. For more details, check the return of getCause().
 	*/
@@ -139,10 +140,7 @@ public abstract class TestSet {
 	* @param fixtures A Map of strings (fixture names) onto methods which return those named values.
 	* @param recursesRemaining The depth limit after which to throw.
 	* @return An array of objects returned by fixtures with names matching the parameters of the passed method which may be supplied in the course of invoking the passed method.
-	* @throws IllegalStateException When a parameter name is not a key into the fixtures dict and a suitable object can therefore not be resolved for that parameter.
-	* @throws IllegalAccessException When, in the course of recursively invoking fixtures' dependencies, an invocation fails due to the fixture's access control restrictions.
-	* @throws IllegalArgumentException When, in the course of recursively invoking fixtures' dependencies, an invocation fails due to a type mismatch between the parameter type and return type of the fixture with the same name.
-	* @throws Throwable When a fixture throws an error, that error is rethrown.
+	* @throws TestConfigurationError when an error in a dependency cannot be resolved due to, for example, fixture member access control restrictions, missing fixtures/typo'd names, missing parameter names in the class file, and more.
 	*/
 	private final Object[] resolveParameters(Method method, Map<String, Method> fixtures, int recursesRemaining) {
 		if (recursesRemaining == 0)
